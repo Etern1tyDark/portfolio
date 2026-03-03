@@ -31,5 +31,6 @@ export default defineConfig({
       include: ['gsap'],
     },
   },
-  site,
+  site: 'https://etern1tydark.github.io',
+  base: '/portfolio',
 });
