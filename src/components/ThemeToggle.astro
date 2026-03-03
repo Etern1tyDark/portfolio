@@ -1,18 +1,27 @@
 ---
 ---
 
-<button id="effects-toggle" class="bg-gray-700 text-white px-3 py-2 rounded-md hover:bg-gray-600 transition-colors text-sm font-semibold" aria-label="Toggle effects">
-  <span id="effects-on">FX ON</span>
-  <span id="effects-off" class="hidden">FX OFF</span>
+<button
+  data-effects-toggle
+  class="bg-gray-700 text-white px-3 py-2 rounded-md hover:bg-gray-600 transition-colors text-sm font-semibold"
+  aria-label="Toggle effects"
+  aria-pressed="false"
+>
+  <span data-effects-on>FX ON</span>
+  <span data-effects-off class="hidden">FX OFF</span>
 </button>
 
 <script>
-  const applyState = (off: boolean) => {
-    document.body.classList.toggle('no-effects', off);
-    localStorage.setItem('effects', off ? 'off' : 'on');
-    const onLabel = document.getElementById('effects-on');
-    const offLabel = document.getElementById('effects-off');
-    if (onLabel && offLabel) {
+  const getToggles = () => Array.from(document.querySelectorAll('[data-effects-toggle]'));
+
+  const updateToggleLabels = (off) => {
+    const toggles = getToggles();
+    for (const toggle of toggles) {
+      const onLabel = toggle.querySelector('[data-effects-on]');
+      const offLabel = toggle.querySelector('[data-effects-off]');
+      toggle.setAttribute('aria-pressed', off ? 'true' : 'false');
+      if (!onLabel || !offLabel) continue;
+
       if (off) {
         onLabel.classList.add('hidden');
         offLabel.classList.remove('hidden');
@@ -23,24 +32,37 @@
     }
   };
 
+  const applyState = (off, persist = true) => {
+    document.body.classList.toggle('no-effects', off);
+    if (persist) {
+      localStorage.setItem('effects', off ? 'off' : 'on');
+    }
+    updateToggleLabels(off);
+  };
+
   const bindToggle = () => {
-    const toggle = document.getElementById('effects-toggle') as HTMLButtonElement | null;
-    if (!toggle) return;
+    const toggles = getToggles();
+    if (!toggles.length) return;
 
     const stored = localStorage.getItem('effects');
     const off = stored === 'off';
-    applyState(off);
+    applyState(off, false);
 
-    toggle.onclick = () => {
-      const isOff = document.body.classList.contains('no-effects');
-      const next = !isOff;
-      applyState(next);
-      toggle.animate(
-        [{ transform: 'rotate(-180deg)' }, { transform: 'rotate(0deg)' }],
-        { duration: 500, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' },
-      );
-      window.dispatchEvent(new CustomEvent('effects-toggle', { detail: { off: next } }));
-    };
+    for (const toggle of toggles) {
+      if (toggle.dataset.effectsBound === 'true') continue;
+      toggle.dataset.effectsBound = 'true';
+
+      toggle.addEventListener('click', () => {
+        const isOff = document.body.classList.contains('no-effects');
+        const next = !isOff;
+        applyState(next);
+        toggle.animate(
+          [{ transform: 'rotate(-180deg)' }, { transform: 'rotate(0deg)' }],
+          { duration: 500, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' },
+        );
+        window.dispatchEvent(new CustomEvent('effects-toggle', { detail: { off: next } }));
+      });
+    }
   };
 
   if (document.readyState === 'loading') {
