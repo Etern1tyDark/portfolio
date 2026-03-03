@@ -1,0 +1,19 @@
+---
+interface Props {
+  committees: string[];
+}
+const { committees } = Astro.props;
+---
+
+<div class="stack-gap">
+  <h2 class="text-3xl font-bold mb-6 text-blue-400 reveal-up">Committees</h2>
+  <div class="card-grid" data-stagger-group>
+    <div class="card p-6 achievement-card" data-stagger-item>
+      <ul class="space-y-1 text-gray-300">
+        {committees.map((item) => (
+          <li>• {item}</li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</div>

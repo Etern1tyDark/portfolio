@@ -1,0 +1,138 @@
+---
+interface ExperienceItem {
+  period: string;
+  title: string;
+  company: string;
+  description: string;
+  tags: string[];
+}
+interface Props {
+  experiences: ExperienceItem[];
+}
+const { experiences } = Astro.props;
+---
+
+<section class="timeline" data-stagger-group>
+  <div class="line line-left" aria-hidden="true"></div>
+  <div class="line line-right" aria-hidden="true"></div>
+
+  {experiences.map((exp, index) => {
+    const side = index % 2 === 0 ? 'left' : 'right';
+    return (
+      <article class={`item ${side}`} data-stagger-item>
+        {/* <div class="dot" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-blue-400">
+            <path
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </div> */}
+
+        <div class="card">
+          <time class="font-mono italic text-sm text-gray-400">{exp.period}</time>
+          <div class="text-lg font-bold text-blue-400 mt-2">{exp.title}</div>
+          <div class="text-base font-semibold text-purple-400">{exp.company}</div>
+          <p class="text-gray-300 py-2">{exp.description}</p>
+          <div class="flex flex-wrap gap-2 mt-3">
+            {exp.tags.map((tag) => (
+              <span class="border border-gray-500 text-gray-300 px-2 py-1 rounded text-xs">{tag}</span>
+            ))}
+          </div>
+        </div>
+      </article>
+    );
+  })}
+</section>
+
+<style>
+  .timeline {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(2rem, 3vw, 2.75rem);
+    padding: 0 0 1rem;
+    --line-left: 16%;
+    --line-right: 84%;
+  }
+
+  .line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, rgba(122, 162, 247, 0.5), rgba(86, 95, 137, 0.6));
+    pointer-events: none;
+  }
+
+  .line-left { left: var(--line-left); }
+  .line-right { left: var(--line-right); }
+
+  .item {
+    position: relative;
+    max-width: 760px;
+    width: 100%;
+  }
+
+  .item.left {
+    align-self: flex-start;
+    padding-left: clamp(1.5rem, 3vw, 2.5rem);
+    padding-right: clamp(4rem, 8vw, 6rem);
+    text-align: left;
+  }
+
+  .item.right {
+    align-self: flex-end;
+    padding-right: clamp(1.5rem, 3vw, 2.5rem);
+    padding-left: clamp(4rem, 8vw, 6rem);
+    text-align: right;
+  }
+
+  .card {
+    background: var(--tokyo-surface-2, #1f2335);
+    border: 1px solid rgba(86, 95, 137, 0.45);
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+    position: relative;
+    z-index: 1;
+  }
+
+  .dot {
+    position: absolute;
+    top: 0.4rem;
+    transform: translate(-50%, 0);
+    width: 2.5rem;
+    height: 2.5rem;
+    background: var(--tokyo-surface-2, #1f2335);
+    border-radius: 9999px;
+    border: 4px solid var(--tokyo-blue, #7aa2f7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 25px rgba(122, 162, 247, 0.35);
+    z-index: 2;
+  }
+
+  .item.left .dot { left: var(--line-left); }
+  .item.right .dot { left: var(--line-right); }
+
+  @media (max-width: 767px) {
+    .timeline {
+      --line-left: 0.5rem;
+      --line-right: 0.5rem;
+      padding-left: 0.75rem;
+    }
+    .item,
+    .item.right {
+      align-self: stretch;
+      padding-left: 2.75rem;
+      padding-right: 0.5rem;
+      text-align: left;
+    }
+    .dot {
+      transform: translate(0, 0);
+    }
+  }
+</style>

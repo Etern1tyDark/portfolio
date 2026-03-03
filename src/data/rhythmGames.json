@@ -1,0 +1,52 @@
+[
+  {
+    "slug": "maimai",
+    "title": "maimai 🌈",
+    "detail": "16.2k",
+    "link": "https://mai.sft.sh/eter",
+    "gallery": ["/images/games/maimai.svg", "/images/games/maimai-2.svg"]
+  },
+  {
+    "slug": "chunithm",
+    "title": "CHUNITHM 🌈",
+    "detail": "16.5",
+    "gallery": ["/images/games/chunithm.svg", "/images/games/chunithm-2.svg"]
+  },
+  {
+    "slug": "arcaea",
+    "title": "Arcaea",
+    "detail": "3*",
+    "gallery": ["/images/games/arcaea.svg", "/images/games/arcaea-2.svg"]
+  },
+  {
+    "slug": "phigros",
+    "title": "Phigros",
+    "detail": "Lv16.8φ",
+    "gallery": ["/images/games/phigros.svg", "/images/games/phigros-2.svg"]
+  },
+  {
+    "slug": "dynamix",
+    "title": "Dynamix",
+    "detail": "Lv14Ω",
+    "gallery": ["/images/games/dynamix.svg", "/images/games/dynamix-2.svg"]
+  },
+  {
+    "slug": "pump-it-up",
+    "title": "Pump It Up",
+    "detail": "ADVANCED Lv.5",
+    "gallery": ["/images/games/pump-it-up.svg", "/images/games/pump-it-up-2.svg"]
+  },
+  {
+    "slug": "osu-mania",
+    "title": "osu!mania",
+    "detail": "Top 11k",
+    "link": "https://osu.ppy.sh/users/16099731/mania",
+    "gallery": ["/images/games/osu-mania.svg", "/images/games/osu-mania-2.svg"]
+  },
+  {
+    "slug": "fanmade-charter",
+    "title": "Fanmade Charter",
+    "detail": "Arcaea / Dynamix / maimai",
+    "gallery": ["/images/games/fanmade-charter.svg", "/images/games/fanmade-charter-2.svg"]
+  }
+]

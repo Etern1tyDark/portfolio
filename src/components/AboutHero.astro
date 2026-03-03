@@ -1,0 +1,91 @@
+<section class="hero min-h-[50vh] hero-tones about-hero">
+  <div class="hero-content about-hero-content">
+    <div class="about-grid">
+      <div class="about-copy">
+        <p class="eyebrow">About</p>
+        <h1 class="text-5xl font-bold text-blue-400 mb-4 hero-title pt-1">Nathan Kho Pancras</h1>
+        <p class="py-2 text-lg text-gray-300 hero-subtitle">
+          Third-year Information Technology student with a strong focus on cybersecurity, especially cryptography, forensics, and red teaming, while still building reliable systems across software and robotics stacks.
+        </p>
+      </div>
+
+      <aside class="photo-card" aria-label="Profile photograph placeholder">
+        <div class="photo-placeholder" role="img" aria-label="Photograph placeholder">
+          <img src="/images/me.jpeg" alt="Profile placeholder image" />
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<style>
+  .about-hero-content {
+    max-width: 72rem;
+    width: 100%;
+    padding: 0 1rem;
+    text-align: left;
+  }
+
+  .about-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(240px, 360px);
+    gap: 1.5rem;
+    align-items: center;
+  }
+
+  .photo-card {
+    width: clamp(140px, 20vw, 190px);
+    justify-self: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .photo-placeholder {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 9999px;
+    border: 1px dashed rgba(122, 162, 247, 0.65);
+    color: rgba(192, 202, 245, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0;
+    font-weight: 600;
+    background: linear-gradient(140deg, rgba(122, 162, 247, 0.08), rgba(187, 154, 247, 0.08));
+    overflow: hidden;
+  }
+
+  .photo-placeholder img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .photo-note {
+    margin-top: 0.65rem;
+    color: rgba(192, 202, 245, 0.72);
+    font-size: 0.9rem;
+    text-align: center;
+  }
+
+  .eyebrow {
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    color: rgba(192, 202, 245, 0.7);
+    margin-bottom: 0.5rem;
+  }
+
+  @media (max-width: 900px) {
+    .about-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .about-copy {
+      text-align: center;
+    }
+  }
+</style>

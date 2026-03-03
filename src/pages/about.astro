@@ -1,0 +1,41 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import AboutHero from '../components/AboutHero.astro';
+import AboutSkillsGrid from '../components/AboutSkillsGrid.astro';
+import AboutMore from '../components/AboutMore.astro';
+import AboutContact from '../components/AboutContact.astro';
+
+const site = Astro.site ?? new URL('https://yourusername.pages.dev');
+const description =
+  'About Nathan Kho Pancras (eter) | Portfolio';
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ProfilePage',
+  url: new URL('/about', site).href,
+  name: 'About Nathan Kho Pancras (eter) | Portfolio',
+  mainEntity: {
+    '@type': 'Person',
+    name: 'Nathan Kho Pancras',
+    url: new URL('/', site).href,
+    sameAs: [
+      'https://github.com/Etern1tyDark',
+      'https://github.com/NathanKhoP',
+      'https://www.linkedin.com/in/nathan-k-pancras/',
+    ],
+  },
+};
+---
+<Layout title="About | Nathan Kho Pancras (eter) | Portfolio" description={description} canonicalPath="/about" jsonLd={jsonLd}>
+  <Navbar currentPath="/about" />
+  <main class="min-h-screen">
+    <AboutHero />
+    <AboutSkillsGrid />
+    <section class="py-20 px-4">
+      <div class="max-w-6xl mx-auto">
+        <AboutMore />
+        <AboutContact />
+      </div>
+    </section>
+  </main>
+</Layout>

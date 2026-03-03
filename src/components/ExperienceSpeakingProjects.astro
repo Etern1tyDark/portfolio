@@ -1,0 +1,170 @@
+---
+interface ProjectItem {
+  title: string;
+  subtitle: string;
+  link: string;
+  gallery?: string[];
+}
+interface Props {
+  projects: ProjectItem[];
+}
+const { projects } = Astro.props;
+---
+
+<div class="stack-gap">
+  <h2 class="text-3xl font-bold mb-6 text-blue-400 reveal-up">Projects</h2>
+  <div class="card-grid" data-stagger-group>
+    {projects.map((project) => (
+      <article class="card p-6 achievement-card project-card" data-stagger-item>
+        <div class="project-carousel-wrap" data-project-carousel>
+          <div class="carousel w-full rounded-lg project-carousel">
+            {(project.gallery ?? []).map((image) => (
+              <div class="carousel-item relative w-full" data-slide>
+                <img class="project-photo" src={image} alt={`${project.title} gallery image`} loading="lazy" />
+              </div>
+            ))}
+          </div>
+
+          {(project.gallery?.length ?? 0) > 1 && (
+            <div class="carousel-controls">
+              <button type="button" class="btn btn-circle btn-xs" data-action="prev">{"<"}</button>
+              <button type="button" class="btn btn-circle btn-xs" data-action="next">{">"}</button>
+            </div>
+          )}
+        </div>
+
+        <h3 class="text-lg font-bold text-purple-300">{project.title}</h3>
+        <p class="text-gray-300">{project.subtitle}</p>
+
+        {(project.gallery?.length ?? 0) > 1 && (
+          <div class="slide-dots">
+            {(project.gallery ?? []).map((_, index) => (
+              <button type="button" class="btn btn-xs btn-circle dot-btn" data-dot={index}>{index + 1}</button>
+            ))}
+          </div>
+        )}
+
+        <a class="btn btn-outline px-4 py-2 rounded-lg" href={project.link} target={project.link.startsWith('http') ? '_blank' : undefined} rel={project.link.startsWith('http') ? 'noopener noreferrer' : undefined}>
+          {project.link === '/' ? 'Open Website' : 'View on GitHub'}
+        </a>
+      </article>
+    ))}
+  </div>
+</div>
+
+<style>
+  .project-card {
+    align-items: center;
+    text-align: center;
+  }
+
+  .project-carousel-wrap {
+    position: relative;
+    width: 100%;
+  }
+
+  .project-carousel {
+    border: 1px solid rgba(122, 162, 247, 0.28);
+    background: rgba(15, 23, 42, 0.35);
+  }
+
+  .project-photo {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  .carousel-controls {
+    position: absolute;
+    left: 0.5rem;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+
+  .carousel-controls button {
+    pointer-events: auto;
+  }
+
+  .slide-dots {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35rem;
+  }
+
+  .dot-btn {
+    min-height: 1.3rem;
+    height: 1.3rem;
+  }
+
+  .dot-btn.active-dot {
+    background: var(--tokyo-blue);
+    color: #0f172a;
+    border-color: transparent;
+  }
+
+  .project-card a.btn {
+    align-self: center;
+  }
+</style>
+
+<script>
+  const initProjectCarousels = () => {
+    const cards = document.querySelectorAll('.project-card');
+
+    cards.forEach((card) => {
+      const root = card.querySelector('[data-project-carousel]');
+      if (!root || root.dataset.bound === '1') return;
+      root.dataset.bound = '1';
+
+      const slides = Array.from(root.querySelectorAll('[data-slide]'));
+      if (slides.length <= 1) return;
+
+      const track = root.querySelector('.project-carousel');
+      if (!track) return;
+
+      const prevBtn = root.querySelector('[data-action="prev"]');
+      const nextBtn = root.querySelector('[data-action="next"]');
+      const dots = Array.from(card.querySelectorAll('[data-dot]'));
+      let current = 0;
+
+      const updateDots = () => {
+        dots.forEach((dot, index) => {
+          dot.classList.toggle('active-dot', index === current);
+        });
+      };
+
+      const goTo = (target, smooth = true) => {
+        current = (target + slides.length) % slides.length;
+        track.scrollTo({
+          left: slides[current].offsetLeft,
+          behavior: smooth ? 'smooth' : 'auto',
+        });
+        updateDots();
+      };
+
+      prevBtn?.addEventListener('click', () => goTo(current - 1));
+      nextBtn?.addEventListener('click', () => goTo(current + 1));
+      dots.forEach((dot) => {
+        dot.addEventListener('click', () => {
+          const idx = Number(dot.getAttribute('data-dot'));
+          if (!Number.isNaN(idx)) goTo(idx);
+        });
+      });
+
+      goTo(0, false);
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initProjectCarousels, { once: true });
+  } else {
+    initProjectCarousels();
+  }
+
+  document.addEventListener('astro:page-load', initProjectCarousels);
+</script>

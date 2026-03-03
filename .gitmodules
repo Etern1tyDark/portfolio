@@ -1,0 +1,3 @@
+[submodule "public/CTFs"]
+	path = public/CTFs
+	url = git@github.com:Etern1tyDark/CTFs.git

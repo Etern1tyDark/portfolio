@@ -1,0 +1,270 @@
+---
+import rhythmGames from '../data/rhythmGames.json';
+---
+
+<section class="more-about">
+  <div class="more-header reveal-up">
+    <p class="eyebrow">More About Me</p>
+    <h2 class="text-4xl font-bold text-blue-400">How I work & unwind</h2>
+    <p class="section-sub">A few personal notes that shape how I build and learn.</p>
+  </div>
+
+  <div class="more-grid" data-stagger-group>
+    <article class="about-card" data-stagger-item>
+      <h3>Learning loop</h3>
+      <p>I gain knowledge in cybersecurity by playing Capture The Flags. I was a digital forensics player, but now I usually play cryptography challenges, although I am widening my areas of knowledge to other areas like blockchain and red teaming. I read cryptography papers, I read writeups, and I do HackTheBox machines.</p>
+    </article>
+
+    <article class="about-card hobby" data-stagger-item>
+      <div>
+        <p class="eyebrow">Hobby</p>
+        <h3>Rhythm games</h3>
+        <p>My long-lasting hobby since late 2019. My most notable games being: <a href=https://mai.sft.sh/eter>maimai DX 🌈 (16218)</a>, CHUNITHM 🌈 (16.5), Arcaea (3*), Phigros (lv16φ), Dynamix (lv14Ω), Pump It Up (ADVANCED Lv.5), osu!mania (Top 11k)</p>
+        <p>I also make fanmade charts for <a href=https://www.youtube.com/watch?v=vnKOcJwmyVM>Arcaea</a>, <a href=https://www.youtube.com/watch?v=BG_wPji-hkc>Dynamix</a>, and <a href=https://www.youtube.com/watch?v=_vcooCMrdBo>maimai DX</a>.</p>
+      </div>
+      <!-- <div class="games-grid">
+        {rhythmGames.map((game) => (
+          <article class="game-card">
+            <div class="game-carousel-wrap" data-game-carousel>
+            <div class="carousel w-full rounded-lg game-carousel">
+              {game.gallery.map((image, index) => {
+                return (
+                  <div class="carousel-item relative w-full" data-slide>
+                    <img class="game-photo" src={image} alt={`${game.title} photo ${index + 1}`} loading="lazy" />
+                  </div>
+                );
+              })}
+            </div>
+            {game.gallery.length > 1 && (
+              <div class="carousel-controls">
+                <button type="button" class="btn btn-circle btn-xs" data-action="prev">{"<"}</button>
+                <button type="button" class="btn btn-circle btn-xs" data-action="next">{">"}</button>
+              </div>
+            )}
+            </div>
+            {game.link ? (
+              <h4><a href={game.link} target="_blank" rel="noopener noreferrer">{game.title}</a></h4>
+            ) : (
+              <h4>{game.title}</h4>
+            )}
+            <p>{game.detail}</p>
+            {game.gallery.length > 1 && (
+              <div class="slide-dots">
+                {game.gallery.map((_, index) => (
+                  <button type="button" class="btn btn-xs btn-circle dot-btn" data-dot={index}>{index + 1}</button>
+                ))}
+              </div>
+            )}
+          </article>
+        ))}
+      </div> -->
+    </article>
+  </div>
+</section>
+
+<style>
+  .more-about {
+    margin-top: 4rem;
+    text-align: left;
+  }
+
+  .more-header {
+    margin-bottom: 1.75rem;
+  }
+
+  .more-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.25rem;
+  }
+
+  .about-card {
+    background: linear-gradient(140deg, rgba(36, 40, 59, 0.95), rgba(20, 24, 37, 0.9));
+    border: 1px solid rgba(86, 95, 137, 0.7);
+    border-radius: 16px;
+    padding: 1.25rem 1.35rem;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.38);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    position: relative;
+  }
+
+  .about-card h3 {
+    font-weight: 700;
+    color: var(--tokyo-contrast);
+    margin-bottom: 0.25rem;
+  }
+
+  .about-card p {
+    color: rgba(192, 202, 245, 0.8);
+  }
+
+  .about-card.hobby {
+    gap: 1rem;
+  }
+
+  .games-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.8rem;
+  }
+
+  @media (max-width: 1100px) {
+    .games-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 820px) {
+    .games-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 560px) {
+    .games-grid {
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+  }
+
+  .game-card {
+    background: linear-gradient(160deg, rgba(18, 24, 40, 0.95), rgba(29, 35, 56, 0.92));
+    border: 1px solid rgba(122, 162, 247, 0.35);
+    border-radius: 12px;
+    padding: 0.65rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.45rem;
+  }
+
+  .game-photo {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  .game-carousel {
+    border: 1px solid rgba(122, 162, 247, 0.28);
+    background: rgba(15, 23, 42, 0.35);
+  }
+
+  .game-carousel-wrap {
+    position: relative;
+    width: 100%;
+  }
+
+  .carousel-controls {
+    position: absolute;
+    left: 0.5rem;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+
+  .carousel-controls button {
+    pointer-events: auto;
+  }
+
+  .game-card h4 {
+    color: var(--tokyo-contrast);
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .game-card p {
+    color: rgba(192, 202, 245, 0.78);
+    font-size: 0.92rem;
+  }
+
+  .game-card h4 a {
+    color: var(--tokyo-cyan);
+    text-decoration: none;
+  }
+
+  .game-card h4 a:hover {
+    color: var(--tokyo-blue);
+  }
+
+  .slide-dots {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35rem;
+  }
+
+  .dot-btn {
+    min-height: 1.3rem;
+    height: 1.3rem;
+  }
+
+  .dot-btn.active-dot {
+    background: var(--tokyo-blue);
+    color: #0f172a;
+    border-color: transparent;
+  }
+</style>
+
+<script>
+  const initGameCarousels = () => {
+    const carousels = document.querySelectorAll('[data-game-carousel]');
+
+    carousels.forEach((root) => {
+      const el = root;
+      if (el.dataset.bound === '1') return;
+      el.dataset.bound = '1';
+
+      const track = el.querySelector('.game-carousel');
+      const slides = Array.from(el.querySelectorAll('[data-slide]'));
+      if (!track || slides.length <= 1) return;
+
+      const card = el.closest('.game-card');
+      const dots = card ? Array.from(card.querySelectorAll('[data-dot]')) : [];
+      const prevBtn = el.querySelector('[data-action="prev"]');
+      const nextBtn = el.querySelector('[data-action="next"]');
+
+      let current = 0;
+
+      const updateDots = () => {
+        dots.forEach((dot, index) => {
+          dot.classList.toggle('active-dot', index === current);
+        });
+      };
+
+      const goTo = (target, smooth = true) => {
+        current = (target + slides.length) % slides.length;
+        track.scrollTo({
+          left: slides[current].offsetLeft,
+          behavior: smooth ? 'smooth' : 'auto',
+        });
+        updateDots();
+      };
+
+      prevBtn?.addEventListener('click', () => goTo(current - 1));
+      nextBtn?.addEventListener('click', () => goTo(current + 1));
+
+      dots.forEach((dot) => {
+        dot.addEventListener('click', () => {
+          const idx = Number(dot.getAttribute('data-dot'));
+          if (!Number.isNaN(idx)) goTo(idx);
+        });
+      });
+
+      goTo(0, false);
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initGameCarousels, { once: true });
+  } else {
+    initGameCarousels();
+  }
+
+  document.addEventListener('astro:page-load', initGameCarousels);
+</script>

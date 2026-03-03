@@ -1,0 +1,284 @@
+<canvas id="canvas" class="fixed inset-0 pointer-events-none opacity-65 mix-blend-soft-light z-30"
+  >Canvas not supported.</canvas
+>
+
+<style>
+  body.no-effects #canvas {
+    display: none !important;
+  }
+
+  canvas#canvas {
+    display: block;
+    background: transparent;
+  }
+</style>
+
+<script is:inline>
+  (function () {
+    "use strict";
+
+    let rafId = null;
+    let initialized = false;
+
+    const boot = () => {
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const effectsOff = document.body.classList.contains("no-effects");
+      if (effectsOff || reduceMotion.matches) return;
+
+      const canvas = document.getElementById("canvas");
+      if (!canvas || !canvas.getContext) return;
+
+      const ctx = canvas.getContext("2d");
+      let X = window.innerWidth;
+      let Y = window.innerHeight;
+      let mouseX = null;
+      let mouseY = null;
+      let dist = 80;
+      let lessThan = Math.sqrt(dist * dist + dist * dist);
+      let mouseDist = 150;
+      let shapes = [];
+      let ease = 0.3;
+      let friction = 0.9;
+      let lineWidth = 2;
+      let cols = 0;
+      let rows = 0;
+      const minDist = 52;
+      const maxDist = 132;
+      const maxPoints = 800;
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function updateCanvasSize() {
+        X = window.innerWidth;
+        Y = window.innerHeight;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.style.width = X + "px";
+        canvas.style.height = Y + "px";
+        canvas.width = Math.floor(X * dpr);
+        canvas.height = Math.floor(Y * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function updateGridMetrics() {
+        const minSide = Math.min(X, Y);
+        const dynamicDist = clamp(Math.round(minSide / 11), minDist, maxDist);
+        dist = dynamicDist;
+
+        cols = Math.ceil(X / dist) + 1;
+        rows = Math.ceil(Y / dist) + 1;
+
+        // Increase spacing if the device would generate too many particles.
+        while (cols * rows > maxPoints && dist < maxDist) {
+          dist += 2;
+          cols = Math.ceil(X / dist) + 1;
+          rows = Math.ceil(Y / dist) + 1;
+        }
+
+        lineWidth = clamp(Math.round(dist / 30), 1, 3);
+        lessThan = Math.sqrt(dist * dist + dist * dist);
+        mouseDist = clamp(Math.round(dist * 1.6), 45, 130);
+      }
+
+      window.requestAnimationFrame =
+        window.requestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        function (cb) {
+          setTimeout(cb, 17);
+        };
+
+      function Shape(ctx, x, y, i) {
+        this.ctx = ctx;
+        this.init(x, y, i);
+        const theme = localStorage.theme || "dark";
+        this.color = theme === "light" ? "rgba(85,85,85,0.22)" : "rgba(170,198,245,0.28)";
+      }
+
+      Shape.prototype.init = function (x, y, i) {
+        this.x = x;
+        this.y = y;
+        this.xi = x;
+        this.yi = y;
+        this.i = i;
+        this.r = 1;
+        this.v = { x: 0, y: 0 };
+        this.phase = Math.random() * Math.PI * 2;
+        this.speed = 0.0007 + Math.random() * 0.0008;
+        this.amp = dist * (0.04 + Math.random() * 0.05);
+      };
+
+      Shape.prototype.draw = function () {
+        var ctx = this.ctx;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2, false);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.restore();
+      };
+
+      Shape.prototype.mouseDist = function (targetX, targetY) {
+        var x = mouseX - this.x;
+        var y = mouseY - this.y;
+        var d = x * x + y * y;
+        var pointerDist = Math.sqrt(d);
+        if (pointerDist < mouseDist) {
+          var colAngle = Math.atan2(mouseY - this.y, mouseX - this.x);
+          this.v.x = -Math.cos(colAngle) * 5;
+          this.v.y = -Math.sin(colAngle) * 5;
+          this.x += this.v.x;
+          this.y += this.v.y;
+        } else if (pointerDist > mouseDist && pointerDist < mouseDist + 10) {
+          this.v.x = 0;
+          this.v.y = 0;
+        } else {
+          this.v.x += (targetX - this.x) * ease;
+          this.v.y += (targetY - this.y) * ease;
+          this.v.x *= friction;
+          this.v.y *= friction;
+          this.x += this.v.x;
+          this.y += this.v.y;
+        }
+      };
+
+      Shape.prototype.render = function (time) {
+        var idleX = Math.sin(time * this.speed + this.phase) * this.amp;
+        var idleY = Math.cos(time * this.speed * 1.12 + this.phase) * this.amp;
+        var targetX = this.xi + idleX;
+        var targetY = this.yi + idleY;
+
+        if (mouseX !== null) {
+          this.mouseDist(targetX, targetY);
+        } else {
+          this.v.x += (targetX - this.x) * ease;
+          this.v.y += (targetY - this.y) * ease;
+          this.v.x *= friction;
+          this.v.y *= friction;
+          this.x += this.v.x;
+          this.y += this.v.y;
+        }
+
+        this.draw();
+      };
+
+      function drawConnection(a, b) {
+        if (!a || !b) return;
+
+        var dx = a.x - b.x;
+        var dy = a.y - b.y;
+        var d = Math.sqrt(dx * dx + dy * dy);
+        if (d > lessThan) return;
+
+        ctx.save();
+        ctx.lineWidth = lineWidth;
+        ctx.strokeStyle = a.color;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawConnections() {
+        // Connect only near grid neighbors to avoid expensive all-point checks.
+        for (var i = 0; i < cols; i++) {
+          for (var j = 0; j < rows; j++) {
+            var idx = i * rows + j;
+            var current = shapes[idx];
+            if (!current) continue;
+
+            drawConnection(current, shapes[(i + 1) * rows + j]);
+            drawConnection(current, shapes[i * rows + (j + 1)]);
+            drawConnection(current, shapes[(i + 1) * rows + (j + 1)]);
+            if (j > 0) drawConnection(current, shapes[(i + 1) * rows + (j - 1)]);
+          }
+        }
+      }
+
+      function buildShapes() {
+        shapes = [];
+        for (var i = 0; i < cols; i++) {
+          for (var j = 0; j < rows; j++) {
+            var s = new Shape(ctx, i * dist, j * dist, i, j);
+            shapes.push(s);
+          }
+        }
+      }
+
+      function configureScene() {
+        updateCanvasSize();
+        updateGridMetrics();
+        buildShapes();
+      }
+
+      configureScene();
+
+      function render() {
+        ctx.clearRect(0, 0, X, Y);
+        var now = performance.now();
+        drawConnections();
+        for (var i = 0; i < shapes.length; i++) {
+          shapes[i].render(now);
+        }
+        rafId = requestAnimationFrame(render);
+      }
+
+      render();
+
+      let resizeQueued = false;
+      function onResize() {
+        if (resizeQueued) return;
+        resizeQueued = true;
+        requestAnimationFrame(function () {
+          configureScene();
+          resizeQueued = false;
+        });
+      }
+
+      window.addEventListener("resize", onResize);
+
+      window.addEventListener("mousemove", function (e) {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+      });
+
+      canvas.addEventListener("touchmove", function (e) {
+        var touch = e.targetTouches[0];
+        mouseX = touch.pageX;
+        mouseY = touch.pageY;
+      });
+
+      initialized = true;
+    };
+
+    const cancel = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      initialized = false;
+    };
+
+    const schedule = () => {
+      if (initialized) return;
+      if ("requestIdleCallback" in window) {
+        window.requestIdleCallback(boot, { timeout: 500 });
+      } else {
+        setTimeout(boot, 200);
+      }
+    };
+
+    if (document.readyState === "complete") {
+      schedule();
+    } else {
+      window.addEventListener("load", schedule, { once: true });
+    }
+
+    document.addEventListener("astro:page-load", schedule);
+    document.addEventListener("astro:after-swap", schedule);
+    document.addEventListener("astro:before-swap", cancel);
+  })();
+</script>

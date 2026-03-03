@@ -1,0 +1,197 @@
+---
+interface AwardItem {
+  result: string;
+  event: string;
+  date: string;
+  awardedBy: string;
+  scope: string;
+  description: string;
+  gallery?: string[];
+}
+interface OtherAwardItem {
+  result: string;
+  event: string;
+  date: string;
+}
+interface Props {
+  awards: AwardItem[];
+  otherAwards: OtherAwardItem[];
+}
+const { awards, otherAwards } = Astro.props;
+---
+
+<div class="stack-gap">
+  <h2 class="text-3xl font-bold mb-6 text-blue-400 reveal-up">Awards & Achievements</h2>
+  <div class="card-grid" data-stagger-group>
+    {awards.map((award) => (
+      <article class="card p-6 achievement-card award-card" data-stagger-item>
+        <div class="award-carousel-wrap" data-award-carousel>
+          <div class="carousel w-full rounded-lg award-carousel">
+            {(award.gallery ?? []).map((image) => (
+              <div class="carousel-item relative w-full" data-slide>
+                <img class="award-photo" src={image} alt={`${award.event} gallery image`} loading="lazy" />
+              </div>
+            ))}
+          </div>
+          {(award.gallery?.length ?? 0) > 1 && (
+            <div class="carousel-controls">
+              <button type="button" class="btn btn-circle btn-xs" data-action="prev">{"<"}</button>
+              <button type="button" class="btn btn-circle btn-xs" data-action="next">{">"}</button>
+            </div>
+          )}
+        </div>
+
+        <div class="award-head">
+          <h3 class="text-lg font-bold text-green-400">{award.result} - {award.event}</h3>
+          <span class="text-xs font-mono text-gray-400 mt-1">{award.date}</span>
+        </div>
+        <p class="text-sm text-gray-400">
+          Awarded by {award.awardedBy} ({award.scope})
+        </p>
+        <p class="text-gray-300 leading-relaxed">{award.description}</p>
+        {(award.gallery?.length ?? 0) > 1 && (
+          <div class="slide-dots">
+            {(award.gallery ?? []).map((_, index) => (
+              <button type="button" class="btn btn-xs btn-circle dot-btn" data-dot={index}>{index + 1}</button>
+            ))}
+          </div>
+        )}
+      </article>
+    ))}
+  </div>
+
+  <div class="mt-10">
+    <h3 class="text-2xl font-bold mb-5 text-gray-400 reveal-up">Other Awards</h3>
+    <div class="card-grid" data-stagger-group>
+      {otherAwards.map((award) => (
+        <article class="card p-6 achievement-card" data-stagger-item>
+          <div class="flex items-start justify-between gap-3">
+            <h4 class="text-base font-bold text-green-400">{award.result} - {award.event}</h4>
+            <span class="text-xs font-mono text-gray-400 mt-1">{award.date}</span>
+          </div>
+        </article>
+      ))}
+    </div>
+  </div>
+</div>
+
+<style>
+  .award-card {
+    align-items: center;
+    text-align: center;
+  }
+
+  .award-carousel-wrap {
+    position: relative;
+    width: 100%;
+  }
+
+  .award-carousel {
+    border: 1px solid rgba(122, 162, 247, 0.28);
+    background: rgba(15, 23, 42, 0.35);
+  }
+
+  .award-photo {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+
+  .award-head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: center;
+  }
+
+  .carousel-controls {
+    position: absolute;
+    left: 0.5rem;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+
+  .carousel-controls button {
+    pointer-events: auto;
+  }
+
+  .slide-dots {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35rem;
+  }
+
+  .dot-btn {
+    min-height: 1.3rem;
+    height: 1.3rem;
+  }
+
+  .dot-btn.active-dot {
+    background: var(--tokyo-blue);
+    color: #0f172a;
+    border-color: transparent;
+  }
+</style>
+
+<script>
+  const initAwardCarousels = () => {
+    const cards = document.querySelectorAll('.award-card');
+
+    cards.forEach((card) => {
+      const root = card.querySelector('[data-award-carousel]');
+      if (!root || root.dataset.bound === '1') return;
+      root.dataset.bound = '1';
+
+      const slides = Array.from(root.querySelectorAll('[data-slide]'));
+      if (slides.length <= 1) return;
+      const track = root.querySelector('.award-carousel');
+      if (!track) return;
+
+      const prevBtn = root.querySelector('[data-action="prev"]');
+      const nextBtn = root.querySelector('[data-action="next"]');
+      const dots = Array.from(card.querySelectorAll('[data-dot]'));
+
+      let current = 0;
+
+      const updateDots = () => {
+        dots.forEach((dot, index) => {
+          dot.classList.toggle('active-dot', index === current);
+        });
+      };
+
+      const goTo = (target, smooth = true) => {
+        current = (target + slides.length) % slides.length;
+        track.scrollTo({
+          left: slides[current].offsetLeft,
+          behavior: smooth ? 'smooth' : 'auto',
+        });
+        updateDots();
+      };
+
+      prevBtn?.addEventListener('click', () => goTo(current - 1));
+      nextBtn?.addEventListener('click', () => goTo(current + 1));
+
+      dots.forEach((dot) => {
+        dot.addEventListener('click', () => {
+          const idx = Number(dot.getAttribute('data-dot'));
+          if (!Number.isNaN(idx)) goTo(idx);
+        });
+      });
+
+      goTo(0, false);
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAwardCarousels, { once: true });
+  } else {
+    initAwardCarousels();
+  }
+
+  document.addEventListener('astro:page-load', initAwardCarousels);
+</script>

@@ -1,0 +1,23 @@
+[
+  { "name": "C", "icon": "mdi:language-c", "accent": "#7aa2f7" },
+  { "name": "C++", "icon": "mdi:language-cpp", "accent": "#7dcfff" },
+  { "name": "Rust", "icon": "mdi:language-rust", "accent": "#e0af68" },
+  { "name": "Python", "icon": "mdi:language-python", "accent": "#e0af68" },
+  { "name": "JavaScript", "icon": "mdi:language-javascript", "accent": "#e0af68" },
+  { "name": "TypeScript", "icon": "mdi:language-typescript", "accent": "#7dcfff" },
+  { "name": "Node.js", "icon": "mdi:nodejs", "accent": "#9ece6a" },
+  { "name": "React", "icon": "mdi:react", "accent": "#7dcfff" },
+  { "name": "Next.js", "icon": "simple-icons:nextdotjs", "accent": "#c0caf5" },
+  { "name": "Vue.js", "icon": "mdi:vuejs", "accent": "#9ece6a" },
+  { "name": "Astro", "icon": "simple-icons:astro", "accent": "#c0caf5" },
+  { "name": "Express", "icon": "simple-icons:express", "accent": "#c0caf5" },
+  { "name": "Flask", "icon": "simple-icons:flask", "accent": "#c0caf5" },
+  { "name": "Tailwind", "icon": "simple-icons:tailwindcss", "accent": "#7dcfff" },
+  { "name": "Git", "icon": "mdi:git", "accent": "#e0af68" },
+  { "name": "Docker", "icon": "mdi:docker", "accent": "#7dcfff" },
+  { "name": "ROS2", "icon": "simple-icons:ros", "accent": "#bb9af7" },
+  { "name": "OpenCV", "icon": "simple-icons:opencv", "accent": "#7aa2f7" },
+  { "name": "PostgreSQL", "icon": "simple-icons:postgresql", "accent": "#7aa2f7" },
+  { "name": "MongoDB", "icon": "simple-icons:mongodb", "accent": "#9ece6a" },
+  { "name": "Linux", "icon": "mdi:linux", "accent": "#f7768e" }
+]

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://daisyui.com/schema.json",
+  "themes": [
+    {
+      "tokyo-dark": {
+        "primary": "#7aa2f7",
+        "secondary": "#bb9af7",
+        "accent": "#9ece6a",
+        "neutral": "#24283b",
+        "base-100": "#1a1b26",
+        "info": "#7dcfff",
+        "success": "#9ece6a",
+        "warning": "#e0af68",
+        "error": "#f7768e"
+      }
+    },
+    {
+      "tokyo-light": {
+        "primary": "#3d59a1",
+        "secondary": "#9775aa",
+        "accent": "#587c35",
+        "neutral": "#cfc9c2",
+        "base-100": "#e1e2e7",
+        "info": "#0c8a9c",
+        "success": "#587c35",
+        "warning": "#b37601",
+        "error": "#db4b4b"
+      }
+    }
+  ],
+  "darkTheme": "tokyo-dark"
+}

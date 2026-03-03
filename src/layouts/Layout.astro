@@ -1,0 +1,324 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  canonicalPath?: string;
+  ogImage?: string;
+  ogType?: 'website' | 'article' | 'profile';
+  noindex?: boolean;
+  jsonLd?: Record<string, unknown> | Array<Record<string, unknown>>;
+  publishedTime?: string;
+  modifiedTime?: string;
+  articleAuthor?: string;
+  disableNoise?: boolean;
+  disableRubber?: boolean;
+}
+
+const {
+  title,
+  description = 'Cybersecurity Portfolio - Cryptography & Digital Forensics',
+  canonicalPath,
+  ogImage,
+  ogType = 'website',
+  noindex = false,
+  jsonLd,
+  publishedTime,
+  modifiedTime,
+  articleAuthor,
+  disableNoise = false,
+  disableRubber = false,
+} = Astro.props;
+
+const siteName = 'Nathan Kho Pancras';
+const baseUrl = Astro.site ?? new URL(Astro.url.origin);
+const pagePath = canonicalPath
+  ? canonicalPath.startsWith('/')
+    ? canonicalPath
+    : `/${canonicalPath}`
+  : Astro.url.pathname;
+const canonicalUrl = new URL(pagePath, baseUrl);
+const ogPathKey = pagePath === '/' ? 'index' : pagePath.replace(/^\/+|\/+$/g, '');
+const ogImagePath = ogImage ?? `/open-graph/${ogPathKey}.png`;
+const ogImageUrl = new URL(ogImagePath, baseUrl);
+const robots = noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large';
+const ldItems = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
+
+import '../styles/global.css';
+import NoiseBackground from '../sugarize/NoiseBackground.astro';
+import RubberBackground from '../sugarize/RubberBackground.astro';
+import Footer from '../components/Footer.astro';
+import { ClientRouter } from 'astro:transitions';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <ClientRouter />
+    <meta charset="UTF-8" />
+    <meta name="description" content={description} />
+    <meta name="robots" content={robots} />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="canonical" href={canonicalUrl.href} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl.href} />
+    <meta property="og:image" content={ogImageUrl.href} />
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:locale" content="en_US" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl.href} />
+
+    {ogType === 'article' && publishedTime && <meta property="article:published_time" content={publishedTime} />}
+    {ogType === 'article' && modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
+    {ogType === 'article' && articleAuthor && <meta property="article:author" content={articleAuthor} />}
+
+    <title>{title}</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+    </style>
+    {ldItems.map((item) => (
+      <script type="application/ld+json" set:html={JSON.stringify(item)} />
+    ))}
+  </head>
+  <body class="min-h-screen transition-colors duration-300 relative overflow-x-hidden">
+    <div id="smooth-wrapper">
+      {!disableNoise && <NoiseBackground />}
+      {!disableRubber && <RubberBackground />}
+      <div id="smooth-content">
+        <slot />
+        <Footer />
+      </div>
+    </div>
+
+    <script is:inline>
+      if (localStorage.getItem('theme') === 'light' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+        document.documentElement.classList.add('light');
+        document.documentElement.setAttribute('data-theme', 'tokyo-light');
+      } else {
+        document.documentElement.classList.add('dark');
+        document.documentElement.setAttribute('data-theme', 'tokyo-dark');
+      }
+    </script>
+  </body>
+</html>
+
+<script>
+  await document.fonts.ready;
+  import gsap from "gsap";
+
+  const loadModule = async (local: string, cdn: string) => {
+    try {
+      return await import(/* @vite-ignore */ local);
+    } catch (err) {
+      console.warn(`${local} failed to load locally, retrying CDN`, err);
+      try {
+        return await import(/* @vite-ignore */ cdn);
+      } catch (err2) {
+        console.warn(`${local} failed to load from CDN`, err2);
+        return null;
+      }
+    }
+  };
+
+  let ScrollTriggerMod: typeof import("gsap/ScrollTrigger") | null = null;
+  let ScrollSmootherMod: typeof import("gsap/ScrollSmoother") | null = null;
+  let SplitTextMod: typeof import("gsap/SplitText") | null = null;
+
+  ScrollTriggerMod = await loadModule(
+    "gsap/ScrollTrigger",
+    "https://cdn.jsdelivr.net/npm/gsap@3.14.1/dist/ScrollTrigger.min.js",
+  );
+  if (ScrollTriggerMod?.ScrollTrigger) {
+    gsap.registerPlugin(ScrollTriggerMod.ScrollTrigger);
+  }
+
+  ScrollSmootherMod = await loadModule(
+    "gsap/ScrollSmoother",
+    "https://cdn.jsdelivr.net/npm/gsap@3.14.1/dist/ScrollSmoother.min.js",
+  );
+  if (ScrollSmootherMod?.ScrollSmoother) {
+    gsap.registerPlugin(ScrollSmootherMod.ScrollSmoother);
+  }
+
+  SplitTextMod = await loadModule(
+    "gsap/SplitText",
+    "https://cdn.jsdelivr.net/npm/gsap@3.14.1/dist/SplitText.min.js",
+  );
+  if (SplitTextMod?.SplitText) {
+    gsap.registerPlugin(SplitTextMod.SplitText);
+  }
+
+  const hasScrollTrigger = Boolean(ScrollTriggerMod?.ScrollTrigger);
+  const hasSmoother = Boolean(ScrollSmootherMod?.ScrollSmoother);
+  const hasSplit = Boolean(SplitTextMod?.SplitText);
+
+  let ctx: gsap.Context | null = null;
+  const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const effectsPref = localStorage.getItem('effects');
+  if (effectsPref === 'off') {
+    document.body.classList.add('no-effects');
+  }
+
+  const revealWithTrigger = (target: gsap.TweenTarget, opts: { y?: number; stagger?: number; trigger?: Element }) => {
+    const yVal = opts.y ?? 24;
+    gsap.from(target, {
+      opacity: 0,
+      y: yVal,
+      duration: 0.85,
+      ease: "power2.out",
+      stagger: opts.stagger,
+      scrollTrigger: hasScrollTrigger && opts.trigger ? {
+        trigger: opts.trigger,
+        start: "top 82%",
+      } : undefined,
+      onComplete: () => { gsap.set(target, { clearProps: "opacity,transform" }); },
+    });
+  };
+
+  const teardown = () => {
+    ctx?.revert();
+    ctx = null;
+    const triggers = ScrollTriggerMod?.ScrollTrigger.getAll() || [];
+    triggers.forEach((t) => t.kill(true));
+    ScrollSmootherMod?.ScrollSmoother.get()?.kill();
+    ScrollTriggerMod?.ScrollTrigger.clearScrollMemory?.();
+  };
+
+  const buildAnimations = () => {
+    const effectsOff = document.body.classList.contains('no-effects');
+    const skipFx = effectsOff || reduceMotionQuery.matches;
+    teardown();
+
+    if (skipFx) {
+      return;
+    }
+
+    ctx = gsap.context(() => {
+      if (hasSmoother && ScrollSmootherMod) {
+        ScrollSmootherMod.ScrollSmoother.get()?.kill();
+        const existingSmoother = ScrollSmootherMod.ScrollSmoother.get();
+        if (existingSmoother) {
+          existingSmoother.content("#smooth-content");
+          existingSmoother.wrapper("#smooth-wrapper");
+          existingSmoother.smooth(0.7);
+          existingSmoother.refresh();
+        } else {
+          ScrollSmootherMod.ScrollSmoother.create({
+            smooth: 0.7,
+            effects: true,
+            normalizeScroll: true,
+            content: "#smooth-content",
+            wrapper: "#smooth-wrapper",
+          });
+        }
+      }
+
+      const heroTitleEl = document.querySelector(".hero-title");
+      if (heroTitleEl) {
+        if (hasSplit && SplitTextMod) {
+          const split = new SplitTextMod.SplitText(heroTitleEl, { type: "chars" });
+          gsap.from(split.chars, {
+            duration: 1,
+            opacity: 0,
+            y: -16,
+            ease: "power2.out",
+            stagger: 0.05,
+            onComplete: () => { gsap.set(split.chars, { clearProps: "opacity,transform" }); },
+          });
+        } else {
+          gsap.from(heroTitleEl, {
+            duration: 0.9,
+            opacity: 0,
+            y: -14,
+            ease: "power2.out",
+            onComplete: () => { gsap.set(heroTitleEl, { clearProps: "opacity,transform" }); },
+          });
+        }
+      }
+
+      const heroSubtitleEl = document.querySelector(".hero-subtitle");
+      if (heroSubtitleEl) {
+        if (hasSplit && SplitTextMod) {
+          const split = new SplitTextMod.SplitText(heroSubtitleEl, { type: "words" });
+          gsap.from(split.words, {
+            duration: 1,
+            opacity: 0,
+            y: -12,
+            ease: "power2.out",
+            delay: 0.2,
+            stagger: 0.06,
+            onComplete: () => { gsap.set(split.words, { clearProps: "opacity,transform" }); },
+          });
+        } else {
+          gsap.from(heroSubtitleEl, {
+            duration: 0.9,
+            opacity: 0,
+            y: -10,
+            ease: "power2.out",
+            delay: 0.15,
+            onComplete: () => { gsap.set(heroSubtitleEl, { clearProps: "opacity,transform" }); },
+          });
+        }
+      }
+
+      const heroCTAs = document.querySelectorAll(".hero-cta a");
+      if (heroCTAs.length) {
+        gsap.set(heroCTAs, { opacity: 1, y: 0 });
+        gsap.from(heroCTAs, {
+          duration: 0.8,
+          opacity: 0,
+          y: 12,
+          ease: "power2.out",
+          delay: 0.35,
+          stagger: 0.08,
+          onComplete: () => { gsap.set(heroCTAs, { clearProps: "opacity,transform" }); },
+        });
+      }
+
+      const revealBlocks = gsap.utils.toArray<HTMLElement>(".reveal-up");
+      revealBlocks.forEach((block) => revealWithTrigger(block, { y: 26, trigger: block }));
+
+      const staggerGroups = gsap.utils.toArray<HTMLElement>("[data-stagger-group]");
+      staggerGroups.forEach((group) => {
+        const items = Array.from(group.querySelectorAll<HTMLElement>("[data-stagger-item]"));
+        if (!items.length) return;
+        revealWithTrigger(items, { y: 18, stagger: 0.08, trigger: group });
+      });
+    });
+
+    if (hasScrollTrigger) {
+      ScrollTriggerMod?.ScrollTrigger.refresh();
+    }
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", buildAnimations, { once: true });
+  } else {
+    buildAnimations();
+  }
+
+  document.addEventListener("astro:page-load", buildAnimations);
+  document.addEventListener("astro:after-swap", () => requestAnimationFrame(buildAnimations));
+  document.addEventListener("astro:before-swap", () => {
+    teardown();
+  });
+  reduceMotionQuery.addEventListener("change", buildAnimations);
+  const scheduleBuild = () => {
+    requestAnimationFrame(() => setTimeout(buildAnimations, 0));
+  };
+
+  window.addEventListener("effects-toggle", (e) => {
+    scheduleBuild();
+  });
+
+  window.addEventListener("storage", (e) => {
+    if (e.key === 'effects') scheduleBuild();
+  });
+</script>

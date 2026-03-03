@@ -1,0 +1,135 @@
+---
+import { Icon } from "astro-icon/components";
+import skills from '../data/skills.json';
+---
+
+<section class="pt-20 px-4">
+  <div class="max-w-6xl mx-auto text-center">
+    <p class="eyebrow reveal-up">Stacks & Tools</p>
+    <h2 class="text-4xl font-bold text-blue-400 reveal-up pt-1">My Skills</h2>
+    <p class="py-2 section-sub reveal-up">I have experience with these.</p>
+
+    <div class="tiles-grid" data-stagger-group>
+      {skills.map((skill, index) => (
+        <div class="skill-tile" data-stagger-item style={`--tile-accent: ${skill.accent}; --tile-index: ${index};`}>
+          <span class="tile-orb" aria-hidden="true"></span>
+          <span class="tile-glow" aria-hidden="true"></span>
+          <Icon name={skill.icon} class="skill-icon" aria-label={`${skill.name} logo`} />
+          <span class="tile-label">{skill.name}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .eyebrow {
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    color: rgba(192, 202, 245, 0.7);
+    margin-bottom: 0.5rem;
+  }
+  
+  .tiles-grid {
+    margin-top: 2.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    justify-items: stretch;
+  }
+
+  .skill-tile {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 18px;
+    background: radial-gradient(circle at 20% 20%, rgba(125, 207, 255, 0.1), rgba(36, 40, 59, 0.9));
+    border: 1px solid rgba(86, 95, 137, 0.8);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    overflow: hidden;
+    isolation: isolate;
+    transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+  }
+
+  .skill-tile::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(122, 162, 247, 0.08), rgba(187, 154, 247, 0.08));
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+  }
+
+  .skill-icon {
+    width: 56px;
+    height: 56px;
+    color: var(--tile-accent, #7aa2f7);
+    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.35));
+    z-index: 1;
+  }
+
+  .tile-label {
+    font-weight: 600;
+    color: var(--tokyo-contrast);
+    z-index: 1;
+  }
+
+  .tile-glow,
+  .tile-orb {
+    position: absolute;
+    inset: 0;
+    opacity: 0.5;
+    filter: blur(28px);
+    background: radial-gradient(circle at 30% 30%, var(--tile-accent, rgba(122, 162, 247, 0.4)), transparent 60%);
+    transition: transform 0.5s ease, opacity 0.5s ease;
+  }
+
+  .tile-orb {
+    inset: auto;
+    width: 140%;
+    height: 140%;
+    top: -20%;
+    left: -20%;
+    background: radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.05), transparent 55%);
+    opacity: 0.25;
+  }
+
+  .skill-tile:hover {
+    transform: translateY(-6px) scale(1.01);
+    border-color: var(--tile-accent, rgba(86, 95, 137, 0.8));
+    box-shadow: 0 28px 60px rgba(0, 0, 0, 0.45);
+  }
+
+  .skill-tile:hover::after {
+    opacity: 1;
+  }
+
+  .skill-tile:hover .tile-glow {
+    opacity: 0.75;
+    transform: scale(1.08) translateY(-4px);
+  }
+
+  .skill-tile:hover .tile-orb {
+    opacity: 0.35;
+    transform: translate(-4px, -6px);
+  }
+
+  @media (max-width: 640px) {
+    .tiles-grid {
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      justify-items: center;
+    }
+
+    .skill-tile {
+      width: 100%;
+      max-width: 220px;
+      aspect-ratio: 1;
+    }
+  }
+</style>

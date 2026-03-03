@@ -1,0 +1,24 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import BlogHero from '../components/BlogHero.astro';
+import BlogList from '../components/BlogList.astro';
+
+const site = Astro.site ?? new URL('https://yourusername.pages.dev');
+const description =
+  'CTF writeups and technical notes by Nathan Kho Pancras, focused on cryptography, reversing, pwn, and security practice.';
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Blog',
+  url: new URL('/blog', site).href,
+  name: 'Blogs | Nathan Kho Pancras (eter) | Portfolio',
+  description,
+};
+---
+<Layout title="Blogs | Cybersecurity Portfolio" description={description} canonicalPath="/blog" jsonLd={jsonLd}>
+  <Navbar currentPath="/blog" />
+  <main class="min-h-screen">
+    <BlogHero />
+    <BlogList />
+  </main>
+</Layout>

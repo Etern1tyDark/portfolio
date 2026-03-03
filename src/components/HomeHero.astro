@@ -1,0 +1,699 @@
+---
+const titleVariants = [
+  "Hello!",
+  "Welcome!",
+  "Hi there!",
+  "Greetings!",
+  "Hey!"
+];
+
+const lanePhrases = titleVariants;
+const rhythmInputKey = "F";
+---
+
+<section class="hero min-h-screen hero-tones relative overflow-hidden">
+  <div class="hero-aurora" aria-hidden="true"></div>
+  <div class="hero-rings" aria-hidden="true"></div>
+  <div class="hero-content text-center">
+    <div class="max-w-5xl mx-auto space-y-6 px-4">
+      <!-- <p class="eyebrow hero-kicker text-sm">{hero.kicker}</p> -->
+      <h1 class="hero-title mb-4" aria-label="Welcome, Hello, Hi there, Greetings, Hey">
+        <div id="rhythm-lane" class="rhythm-lane" aria-hidden="true">
+          <div id="judgement-line" class="judgement-line">
+            <span class="judgement-marker judgement-marker-top" aria-hidden="true"></span>
+            <span class="judgement-marker judgement-marker-bottom" aria-hidden="true"></span>
+            <span class="judgement-tag">JUDGEMENT</span>
+          </div>
+          <div class="rhythm-stream"></div>
+        </div>
+      </h1>
+      <div class="hero-rhythm-controls-wrapper">
+        <p class="hero-rhythm-hint hidden md:block">Press <kbd>{rhythmInputKey}</kbd> to the notes!</p>
+        <button id="mobile-rhythm-btn" class="hero-rhythm-tap-btn md:hidden">
+          TAP TO THE NOTES!
+        </button>
+      </div>
+      <p id="rhythm-judgement" class="hero-rhythm-judge" aria-live="polite"></p>
+      <p class="text-base md:text-lg text-gray-200 hero-subtitle max-w-xl mx-auto leading-relaxed">
+        I'm Nathan, a third-year Information Technology student focused on cybersecurity, with active work in cryptography, forensics, red teaming, and software development.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center mt-8 hero-cta px-4 sm:px-0">
+        <a href="/blog" class="btn btn-primary px-8 py-3 text-lg sm:text-xl rounded-xl w-full sm:w-auto">View Blogs</a>
+        <a href="/experience" class="btn btn-outline px-8 py-3 text-lg sm:text-xl rounded-xl transition-all w-full sm:w-auto">Experience</a>
+      </div>
+
+      <!-- <div class="hero-meta" data-stagger-group>
+        {hero.chips.map((chip) => (
+          <span class="meta-chip" data-stagger-item>{chip}</span>
+        ))}
+      </div> -->
+    </div>
+  </div>
+</section>
+
+<script define:vars={{ rhythmInputKey, lanePhrases }} is:inline>
+  (() => {
+    const PERFECT_MS = 70;
+    const GOOD_MS = 140;
+    const SPAWN_INTERVAL_MS = 1850;
+    const NOTE_GAP_PX = 120;
+
+    let cleanup = null;
+
+    const isEditableTarget = (target) =>
+      target instanceof HTMLElement &&
+      (target.isContentEditable ||
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT");
+
+    const buildNoteElement = (text) => {
+      const note = document.createElement("span");
+      note.className = "rhythm-note";
+
+      const word = document.createElement("span");
+      word.className = "rhythm-word";
+
+      const wordRow = document.createElement("span");
+      wordRow.className = "rhythm-word-row";
+      word.appendChild(wordRow);
+      note.appendChild(word);
+
+      for (const char of Array.from(text)) {
+        const charNode = document.createElement("span");
+        charNode.className = "rhythm-char" + (char === " " ? " is-space" : "");
+
+        const glyph = document.createElement("span");
+        glyph.className = "char-glyph";
+        glyph.textContent = char;
+        charNode.appendChild(glyph);
+
+        wordRow.appendChild(charNode);
+      }
+
+      const tap = document.createElement("span");
+      tap.className = /[a-z]/i.test(text) ? "tap-note" : "tap-note tap-note-ghost";
+      word.appendChild(tap);
+
+      return note;
+    };
+
+    const initRhythmLane = () => {
+      const lane = document.getElementById("rhythm-lane");
+      const stream = lane?.querySelector(".rhythm-stream");
+      const judgementLine = document.getElementById("judgement-line");
+      const judgementLabel = document.getElementById("rhythm-judgement");
+      if (!lane || !stream || !judgementLine || !judgementLabel) return () => {};
+
+      let laneWidth = 0;
+      let judgementX = 0;
+      let phraseIndex = 0;
+      let rafId = 0;
+      let spawnTimer = 0;
+      let clearHitTimer = 0;
+      let clearJudgeTimer = 0;
+      let lastFrame = 0;
+
+      const notes = [];
+
+      const recalcMetrics = () => {
+        const laneRect = lane.getBoundingClientRect();
+        laneWidth = laneRect.width;
+        const judgementRect = judgementLine.getBoundingClientRect();
+        judgementX = judgementRect.left - laneRect.left + judgementRect.width * 0.5;
+      };
+
+      const renderNote = (note) => {
+        const center = note.x + note.width * 0.5;
+        const rightFadeStart = laneWidth - 180;
+        const leftFadeEnd = 180;
+
+        let opacity = 1;
+        if (center > rightFadeStart) {
+          opacity = Math.max(0, (laneWidth - center) / 180);
+        } else if (center < leftFadeEnd) {
+          opacity = Math.max(0, center / 180);
+        }
+
+        note.el.style.opacity = String(opacity);
+        note.el.style.transform = `translate(${note.x}px, -55%)`;
+      };
+
+      const showJudgement = (type, offsetMs) => {
+        const signed = offsetMs > 0 ? "+" + offsetMs : String(offsetMs);
+        judgementLabel.textContent = `${type} ${signed}ms`;
+        judgementLabel.className = `hero-rhythm-judge is-visible ${type.toLowerCase()}`;
+
+        window.clearTimeout(clearJudgeTimer);
+        clearJudgeTimer = window.setTimeout(() => {
+          judgementLabel.className = "hero-rhythm-judge";
+        }, 460);
+      };
+
+      const pulseJudgementLine = () => {
+        judgementLine.classList.remove("is-hit");
+        judgementLine.offsetWidth;
+        judgementLine.classList.add("is-hit");
+
+        window.clearTimeout(clearHitTimer);
+        clearHitTimer = window.setTimeout(() => {
+          judgementLine.classList.remove("is-hit");
+        }, 160);
+      };
+
+      const spawnNote = () => {
+        const phrase = lanePhrases[phraseIndex % lanePhrases.length];
+        phraseIndex += 1;
+
+        const el = buildNoteElement(phrase);
+        stream.appendChild(el);
+
+        const width = el.offsetWidth;
+        const startX = laneWidth + 72;
+        const endX = -(width + 140);
+        const travelMs = window.innerWidth < 768 ? 7360 : 8640;
+        const speedPxPerMs = (startX - endX) / travelMs;
+
+        const note = {
+          el,
+          width,
+          startX,
+          endX,
+          x: startX,
+          speedPxPerMs,
+          hit: false,
+        };
+        notes.push(note);
+        return note;
+      };
+
+      const removeNote = (note, hit) => {
+        if (note.hit) return;
+        note.hit = true;
+        note.el.style.setProperty("--note-x", `${note.x}px`);
+        note.el.classList.add(hit ? "is-cleared" : "is-missed");
+        window.setTimeout(() => {
+          note.el.remove();
+        }, hit ? 130 : 80);
+      };
+
+      const updateNotes = (dt) => {
+        for (let i = notes.length - 1; i >= 0; i -= 1) {
+          const note = notes[i];
+          if (note.hit) {
+            notes.splice(i, 1);
+            continue;
+          }
+
+          note.x -= note.speedPxPerMs * dt;
+
+          if (note.x + note.width < -140) {
+            removeNote(note, false);
+            notes.splice(i, 1);
+            continue;
+          }
+
+          renderNote(note);
+        }
+      };
+
+      const findBestNote = () => {
+        let best = null;
+        let bestAbsOffset = Infinity;
+        let bestOffset = 0;
+
+        for (const note of notes) {
+          if (note.hit) continue;
+          const centerX = note.x + note.width * 0.5;
+          const offsetMs = (centerX - judgementX) / note.speedPxPerMs;
+          const absOffset = Math.abs(offsetMs);
+
+          if (absOffset < bestAbsOffset) {
+            best = note;
+            bestAbsOffset = absOffset;
+            bestOffset = offsetMs;
+          }
+        }
+
+        return { best, bestAbsOffset, bestOffset };
+      };
+
+      const triggerHit = () => {
+        pulseJudgementLine();
+
+        const { best, bestAbsOffset, bestOffset } = findBestNote();
+        if (!best || bestAbsOffset > GOOD_MS) return;
+
+        const roundedOffset = Math.round(bestOffset);
+        if (bestAbsOffset <= PERFECT_MS) {
+          showJudgement("PERFECT", roundedOffset);
+        } else {
+          showJudgement("GOOD", roundedOffset);
+        }
+
+        removeNote(best, true);
+      };
+
+      const onKeyDown = (event) => {
+        if (event.repeat) return;
+        if (event.key.toLowerCase() !== rhythmInputKey.toLowerCase()) return;
+        if (isEditableTarget(event.target)) return;
+
+        event.preventDefault();
+        triggerHit();
+      };
+
+      const frame = (now) => {
+        if (!lastFrame) lastFrame = now;
+        const dt = Math.min(50, now - lastFrame);
+        lastFrame = now;
+        updateNotes(dt);
+        rafId = window.requestAnimationFrame(frame);
+      };
+
+      const scheduleSpawn = () => {
+        const note = spawnNote();
+        const gapMs = (note.width + NOTE_GAP_PX) / note.speedPxPerMs;
+        const nextDelay = Math.max(SPAWN_INTERVAL_MS, Math.round(gapMs));
+        spawnTimer = window.setTimeout(scheduleSpawn, nextDelay);
+      };
+
+      const start = () => {
+        recalcMetrics();
+        stream.innerHTML = "";
+
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          const staticNote = buildNoteElement(lanePhrases[0]);
+          staticNote.classList.add("rhythm-note-static");
+          stream.appendChild(staticNote);
+          return;
+        }
+
+        const firstNote = spawnNote();
+        const firstGapMs = (firstNote.width + NOTE_GAP_PX) / firstNote.speedPxPerMs;
+        spawnTimer = window.setTimeout(scheduleSpawn, Math.max(SPAWN_INTERVAL_MS, Math.round(firstGapMs)));
+        rafId = window.requestAnimationFrame(frame);
+      };
+
+      const fontsReady = "fonts" in document ? document.fonts.ready : Promise.resolve();
+      fontsReady.then(start);
+
+      window.addEventListener("resize", recalcMetrics);
+      window.addEventListener("keydown", onKeyDown);
+
+      const onMobileTap = (e) => {
+        e.preventDefault();
+        triggerHit();
+      };
+      
+      const mobileBtn = document.getElementById("mobile-rhythm-btn");
+      if (mobileBtn) {
+        mobileBtn.addEventListener("pointerdown", onMobileTap);
+      }
+
+      return () => {
+        window.removeEventListener("resize", recalcMetrics);
+        window.removeEventListener("keydown", onKeyDown);
+        if (mobileBtn) {
+          mobileBtn.removeEventListener("pointerdown", onMobileTap);
+        }
+        window.cancelAnimationFrame(rafId);
+        window.clearTimeout(spawnTimer);
+        window.clearTimeout(clearHitTimer);
+        window.clearTimeout(clearJudgeTimer);
+        stream.innerHTML = "";
+      };
+    };
+
+    const mount = () => {
+      if (cleanup) cleanup();
+      cleanup = initRhythmLane();
+    };
+
+    const unmount = () => {
+      if (cleanup) {
+        cleanup();
+        cleanup = null;
+      }
+    };
+
+    mount();
+    document.addEventListener("astro:page-load", mount);
+    document.addEventListener("astro:before-swap", unmount);
+  })();
+</script>
+
+<style>
+  .hero-tones {
+    position: relative;
+    isolation: isolate;
+    background: radial-gradient(circle at 20% 20%, rgba(122, 162, 247, 0.18), transparent 35%),
+      radial-gradient(circle at 80% 10%, rgba(187, 154, 247, 0.16), transparent 35%),
+      radial-gradient(circle at 50% 85%, rgba(125, 207, 255, 0.12), transparent 38%),
+      var(--tokyo-surface);
+  }
+
+  .hero-aurora {
+    position: absolute;
+    inset: -20% -10% auto -10%;
+    height: 60%;
+    background: radial-gradient(circle at 30% 40%, rgba(122, 162, 247, 0.35), transparent 55%),
+      radial-gradient(circle at 70% 30%, rgba(187, 154, 247, 0.25), transparent 50%),
+      radial-gradient(circle at 50% 60%, rgba(125, 207, 255, 0.18), transparent 55%);
+    filter: blur(48px);
+    opacity: 0.8;
+    z-index: 0;
+  }
+
+  .hero-rings {
+    position: absolute;
+    inset: 8% 10% auto 10%;
+    height: 70%;
+    background: radial-gradient(circle, rgba(192, 202, 245, 0.08) 0%, transparent 55%);
+    border-radius: 50%;
+    filter: blur(18px);
+    opacity: 0.65;
+    z-index: 0;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .hero-kicker {
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    color: rgba(192, 202, 245, 0.7);
+  }
+
+  .hero-title {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 78rem;
+  }
+
+  .rhythm-lane {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.2rem;
+    border: 1px solid rgba(122, 162, 247, 0.28);
+    background: linear-gradient(180deg, rgba(36, 40, 59, 0.68), rgba(20, 24, 37, 0.78));
+    box-shadow: inset 0 0 40px rgba(122, 162, 247, 0.08), 0 20px 45px rgba(0, 0, 0, 0.35);
+    padding: 1.25rem 0 1.35rem;
+    backdrop-filter: blur(6px);
+    mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.85) 12%, #000 30%, #000 70%, rgba(0, 0, 0, 0.85) 88%, transparent 100%);
+  }
+
+  .judgement-line {
+    position: absolute;
+    left: 50%;
+    top: 0.35rem;
+    bottom: 0.35rem;
+    width: 2px;
+    transform: translateX(-50%);
+    background: linear-gradient(to bottom, rgba(125, 207, 255, 0), rgba(125, 207, 255, 0.95), rgba(125, 207, 255, 0));
+    box-shadow: 0 0 22px rgba(125, 207, 255, 0.7);
+    z-index: 2;
+    transition: box-shadow 120ms ease, width 120ms ease;
+  }
+
+  .judgement-tag {
+    position: absolute;
+    left: 50%;
+    bottom: -0.3rem;
+    transform: translate(-50%, 100%);
+    font-size: 0.65rem;
+    letter-spacing: 0.16em;
+    color: rgba(192, 202, 245, 0.8);
+    white-space: nowrap;
+  }
+
+  .judgement-line.is-hit {
+    width: 3px;
+    box-shadow: 0 0 30px rgba(125, 207, 255, 0.95), 0 0 45px rgba(122, 162, 247, 0.65);
+  }
+
+  .judge-hit-gate {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.18rem;
+    transform: translate(-50%, -50%);
+    opacity: 0.28;
+    transition: opacity 120ms ease, transform 120ms ease;
+    color: rgba(125, 207, 255, 0.92);
+    text-shadow: 0 0 8px rgba(125, 207, 255, 0.6);
+  }
+
+  .judge-arrow {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .judge-arrow-up {
+    transform: translateY(0.04rem);
+  }
+
+  .judge-arrow-down {
+    transform: translateY(-0.04rem);
+  }
+
+  .judge-hit-bar {
+    width: 0.95rem;
+    height: 0.15rem;
+    border-radius: 99px;
+    background: rgba(125, 207, 255, 0.9);
+    box-shadow: 0 0 10px rgba(125, 207, 255, 0.7);
+  }
+
+  .judgement-line.is-hit .judge-hit-gate {
+    opacity: 1;
+    animation: judge-hit-gate-pulse 180ms ease-out;
+  }
+
+  .rhythm-stream {
+    position: relative;
+    height: clamp(3.4rem, 8vw, 6rem);
+  }
+
+  :global(.rhythm-note) {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translate(0, -55%);
+    opacity: 0;
+    will-change: transform, opacity, filter;
+  }
+
+  :global(.rhythm-note-static) {
+    left: 5%;
+    opacity: 0.82;
+    transform: translate(0, -55%);
+  }
+
+  :global(.rhythm-note.is-cleared) {
+    opacity: 0 !important;
+    filter: blur(2px);
+    transform: translate(var(--note-x, 0px), -55%) scale(0.9);
+  }
+
+  :global(.rhythm-note.is-missed) {
+    opacity: 0 !important;
+  }
+
+  :global(.rhythm-word) {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    white-space: nowrap;
+  }
+
+  :global(.rhythm-word-row) {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 0.1rem;
+  }
+
+  :global(.rhythm-char) {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: clamp(1.8rem, 2.3vw, 2.8rem);
+    line-height: 0.9;
+    gap: 0.7rem;
+  }
+
+  :global(.rhythm-char.is-space) {
+    min-width: clamp(0.9rem, 1.5vw, 1.2rem);
+  }
+
+  :global(.char-glyph) {
+    font-size: clamp(2rem, 6vw, 4.4rem);
+    font-weight: 800;
+    color: rgba(147, 197, 253, 0.95);
+    text-shadow: 0 0 20px rgba(125, 207, 255, 0.45);
+    font-family: "JetBrains Mono", monospace;
+  }
+
+  :global(.tap-note) {
+    width: clamp(0.5rem, 1.1vw, 0.78rem);
+    height: clamp(0.5rem, 1.1vw, 0.78rem);
+    border-radius: 999px;
+    border: 2px solid rgba(125, 207, 255, 0.95);
+    background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.9), rgba(122, 162, 247, 0.9));
+    box-shadow: 0 0 12px rgba(125, 207, 255, 0.8);
+    margin-top: 0.78rem;
+  }
+
+  :global(.tap-note-ghost) {
+    opacity: 0;
+  }
+
+  .hero-rhythm-hint {
+    margin: 0.3rem auto 0;
+    color: rgba(192, 202, 245, 0.82);
+    font-size: 0.84rem;
+    letter-spacing: 0.08em;
+    animation: hero-rhythm-hint-fade 2.4s ease-in-out infinite;
+  }
+
+  .hero-rhythm-judge {
+    margin: 0.05rem auto 0;
+    min-height: 1.1rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    font-family: "JetBrains Mono", monospace;
+    opacity: 0;
+    transform: translateY(0.25rem);
+    transition: opacity 140ms ease, transform 140ms ease;
+  }
+
+  .hero-rhythm-judge.is-visible {
+    opacity: 0.95;
+    transform: translateY(0);
+  }
+
+  .hero-rhythm-judge.perfect {
+    color: rgba(125, 255, 197, 0.95);
+    text-shadow: 0 0 12px rgba(125, 255, 197, 0.5);
+  }
+
+  .hero-rhythm-judge.good {
+    color: rgba(125, 207, 255, 0.95);
+    text-shadow: 0 0 12px rgba(125, 207, 255, 0.45);
+  }
+
+  .hero-rhythm-hint kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5rem;
+    padding: 0.04rem 0.34rem;
+    margin: 0 0.15rem;
+    border-radius: 0.38rem;
+    border: 1px solid rgba(122, 162, 247, 0.6);
+    background: rgba(20, 24, 37, 0.78);
+    color: rgba(125, 207, 255, 0.96);
+    font-family: "JetBrains Mono", monospace;
+    font-weight: 700;
+  }
+
+  @keyframes judge-hit-gate-pulse {
+    0% {
+      transform: translate(-50%, -50%) scale(0.9);
+      filter: blur(1px);
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(1.08);
+      filter: blur(0);
+    }
+  }
+
+  @keyframes hero-rhythm-hint-fade {
+    0%,
+    100% {
+      opacity: 0.34;
+    }
+    50% {
+      opacity: 0.9;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-rhythm-hint {
+      animation: none;
+      opacity: 0.9;
+    }
+  }
+
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+  }
+
+  .meta-chip {
+    padding: 0.65rem 0.95rem;
+    border-radius: 999px;
+    background: rgba(36, 40, 59, 0.78);
+    border: 1px solid rgba(122, 162, 247, 0.35);
+    color: rgba(192, 202, 245, 0.9);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(10px);
+  }
+
+  .hero-rhythm-tap-btn {
+    display: none;
+    margin: 0.5rem auto 0;
+    padding: 0.6rem 1.4rem;
+    border-radius: 999px;
+    background: rgba(122, 162, 247, 0.15);
+    border: 1px solid rgba(122, 162, 247, 0.4);
+    color: rgba(125, 207, 255, 0.95);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    backdrop-filter: blur(4px);
+    transition: all 0.2s ease;
+    animation: hero-rhythm-hint-fade 2.4s ease-in-out infinite;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hero-rhythm-tap-btn:active {
+    transform: scale(0.95);
+    background: rgba(122, 162, 247, 0.3);
+  }
+
+  @media (max-width: 768px) {
+    .hero-tones {
+      padding: 0 1rem;
+    }
+
+    .rhythm-lane {
+      padding: 1rem 0;
+      mask-image: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.85) 5%, #000 15%, #000 85%, rgba(0, 0, 0, 0.85) 95%, transparent 100%);
+    }
+
+    .hero-rhythm-hint {
+      font-size: 0.76rem;
+    }
+
+    .hero-rhythm-tap-btn {
+      display: inline-flex;
+    }
+  }
+</style>

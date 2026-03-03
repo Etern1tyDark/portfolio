@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520" role="img" aria-label="Standoff 15 for Blue Teams card image">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1c2518"/>
+      <stop offset="100%" stop-color="#34502b"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="520" fill="url(#g)"/>
+  <g opacity="0.18" fill="#ffffff">
+    <circle cx="120" cy="90" r="80"/>
+    <circle cx="760" cy="420" r="130"/>
+  </g>
+  <text x="50%" y="44%" fill="#c0caf5" text-anchor="middle" dominant-baseline="middle" font-family="Fira Code, monospace" font-size="48" font-weight="700">Top 5</text>
+  <text x="50%" y="58%" fill="#9ece6a" text-anchor="middle" dominant-baseline="middle" font-family="Fira Code, monospace" font-size="27">Standoff 15 for Blue Teams</text>
+</svg>

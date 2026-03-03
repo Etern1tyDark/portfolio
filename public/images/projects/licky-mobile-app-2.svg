@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="520" viewBox="0 0 900 520" role="img" aria-label="Licky Mobile App image 2">
+  <defs><linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0f172a"/><stop offset="100%" stop-color="#203a52"/></linearGradient></defs>
+  <rect width="900" height="520" fill="url(#g2)"/>
+  <g opacity="0.28" stroke="#7aa2f7" stroke-width="6" fill="none"><path d="M 70 370 Q 220 250 360 330 T 820 260"/><path d="M 55 430 Q 270 340 450 420 T 850 350"/></g>
+  <text x="50%" y="45%" fill="#c0caf5" text-anchor="middle" dominant-baseline="middle" font-family="Fira Code, monospace" font-size="45" font-weight="700">Licky Mobile App</text>
+  <text x="50%" y="60%" fill="#7dcfff" text-anchor="middle" dominant-baseline="middle" font-family="Fira Code, monospace" font-size="24">Slide 2</text>
+</svg>

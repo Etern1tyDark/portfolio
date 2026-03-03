@@ -1,0 +1,134 @@
+---
+import ThemeToggle from './ThemeToggle.astro';
+
+const { currentPath = '/' } = Astro.props;
+
+const navItems = [
+  { path: '/', label: 'Home' },
+  { path: '/about', label: 'About' },
+  { path: '/experience', label: 'Experience' },
+  { path: '/blog', label: 'Blogs' },
+];
+---
+
+<nav class="bg-gray-900 bg-opacity-80 backdrop-blur-md sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      <div class="flex items-center w-40 shrink-0">
+        <a href="/" class="text-xl font-bold text-blue-400 font-mono whitespace-nowrap">
+          <span class="text-gray-400">~/</span><span id="typewriter-portfolio"></span><span class="animate-pulse">_</span>
+        </a>
+      </div>
+      
+      <div class="hidden md:block">
+        <div class="ml-10 flex items-baseline space-x-4">
+          {navItems.map((item) => (
+            <a href={item.path} class={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              currentPath === item.path 
+                ? 'bg-gray-800 text-blue-400' 
+                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+            }`}>
+              {item.label}
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <div class="hidden md:block">
+        <ThemeToggle />
+      </div>
+
+      <div class="md:hidden flex items-center gap-2">
+        <ThemeToggle />
+        <button id="mobile-menu-toggle" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white" aria-label="Toggle navigation" aria-expanded="false">
+          <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="mobile-menu" class="md:hidden border-t border-gray-800 bg-gray-900 bg-opacity-95 backdrop-blur-md hidden">
+    <div class="px-4 pt-2 pb-4 space-y-1">
+      {navItems.map((item) => (
+        <a href={item.path} class={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+          currentPath === item.path 
+            ? 'bg-gray-800 text-blue-400' 
+            : 'text-gray-200 hover:bg-gray-800 hover:text-white'
+        }`}>
+          {item.label}
+        </a>
+      ))}
+    </div>
+  </div>
+</nav>
+
+<script>
+  const toggleMenu = () => {
+    const btn = document.getElementById('mobile-menu-toggle');
+    const menu = document.getElementById('mobile-menu');
+    if (!btn || !menu) return;
+
+    const close = () => {
+      menu.classList.add('hidden');
+      btn.setAttribute('aria-expanded', 'false');
+    };
+
+    btn.onclick = () => {
+      const isOpen = !menu.classList.contains('hidden');
+      if (isOpen) {
+        close();
+      } else {
+        menu.classList.remove('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    };
+
+    menu.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', close);
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', toggleMenu, { once: true });
+  } else {
+    toggleMenu();
+  }
+
+  document.addEventListener('astro:page-load', toggleMenu);
+
+  // Typewriter effect for portfolio logo
+  let typewriterTimeout;
+  
+  const initTypewriter = () => {
+    const element = document.getElementById('typewriter-portfolio');
+    if (!element) return;
+    
+    // Clear any pending timeout to prevent overlapping
+    if (typewriterTimeout) {
+      clearTimeout(typewriterTimeout);
+    }
+    
+    const text = 'eter';
+    let index = 0;
+    
+    // Clear any existing text
+    element.textContent = '';
+    
+    const type = () => {
+      if (index < text.length) {
+        element.textContent += text.charAt(index);
+        index++;
+        typewriterTimeout = setTimeout(type, 100 + Math.random() * 50);
+      }
+    };
+    
+    // Start typing after a short delay
+    typewriterTimeout = setTimeout(type, 300);
+  };
+  
+  initTypewriter();
+  
+  document.addEventListener('astro:page-load', initTypewriter);
+</script>

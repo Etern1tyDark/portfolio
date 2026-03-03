@@ -1,0 +1,158 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+import { getCollection } from 'astro:content';
+import { type CollectionEntry } from 'astro:content';
+import '../../styles/global.css';
+import 'katex/dist/katex.min.css';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts');
+  return posts.map((post: any) => ({
+    params: { slug: post.slug },
+    props: { post },
+  }));
+}
+
+type Props = { post: CollectionEntry<'posts'> };
+const { post } = Astro.props;
+const { Content } = await post.render();
+const site = Astro.site ?? new URL('https://yourusername.pages.dev');
+const canonicalPath = `/blog/${post.slug}`;
+const canonicalUrl = new URL(canonicalPath, site).href;
+const publishedIso = post.data.pubDate.toISOString();
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: post.data.title,
+  description: post.data.description,
+  datePublished: publishedIso,
+  dateModified: publishedIso,
+  author: {
+    '@type': 'Person',
+    name: post.data.author,
+  },
+  mainEntityOfPage: canonicalUrl,
+  url: canonicalUrl,
+  keywords: post.data.tags.join(', '),
+};
+---
+
+<Layout
+  title={`${post.data.title} | Cybersecurity Portfolio`}
+  description={post.data.description}
+  canonicalPath={canonicalPath}
+  ogType="article"
+  publishedTime={publishedIso}
+  modifiedTime={publishedIso}
+  articleAuthor={post.data.author}
+  jsonLd={jsonLd}
+  disableNoise
+  disableRubber
+>
+  <Navbar currentPath="/blog" />
+  <main class="min-h-screen">
+    <article class="max-w-4xl mx-auto px-4 py-12">
+      <header class="mb-12">
+        <a href="/blog" class="text-sm text-blue-400 hover:text-purple-400 transition-colors mb-4 inline-block">
+          &larr; Back to blogs
+        </a>
+        <h1 class="text-4xl md:text-5xl font-bold text-blue-400 mb-4">{post.data.title}</h1>
+        <div class="flex flex-wrap items-center gap-4 text-sm text-gray-400 mb-6">
+          <time>{post.data.pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</time>
+          <span>&bull;</span>
+          <span>{post.data.author}</span>
+        </div>
+        <div class="flex flex-wrap gap-2 mb-8">
+          {post.data.tags.map((tag: string) => (
+            <span class="bg-purple-500 text-white px-3 py-1 rounded-full text-sm">{tag}</span>
+          ))}
+        </div>
+        <p class="text-xl text-gray-300 leading-relaxed">{post.data.description}</p>
+      </header>
+
+      <div class="prose prose-lg max-w-none text-gray-300">
+        <Content />
+      </div>
+    </article>
+  </main>
+</Layout>
+
+<style>
+  :global(.prose h2) {
+    font-size: 1.9rem;
+    line-height: 1.25;
+    font-weight: 700;
+    color: var(--tokyo-blue);
+    margin-top: 2.25rem;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid rgba(86, 95, 137, 0.45);
+  }
+
+  :global(.prose h3) {
+    font-size: 1.35rem;
+    line-height: 1.3;
+    font-weight: 700;
+    color: var(--tokyo-cyan);
+    margin-top: 1.5rem;
+    margin-bottom: 0.65rem;
+  }
+
+  :global(.prose p) {
+    margin: 0.8rem 0;
+  }
+
+  :global(.prose ul) {
+    list-style: disc;
+    padding-left: 1.35rem;
+    margin: 0.7rem 0;
+  }
+
+  :global(.prose ol) {
+    list-style: decimal;
+    padding-left: 1.35rem;
+    margin: 0.7rem 0;
+  }
+
+  :global(.prose li) {
+    margin: 0.3rem 0;
+  }
+
+  :global(.prose .katex-display) {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.2rem 0;
+  }
+
+  :global(.prose :not(pre) > code) {
+    background: rgba(122, 162, 247, 0.16);
+    color: #d7e3ff;
+    border: 1px solid rgba(122, 162, 247, 0.36);
+    border-radius: 0.42rem;
+    padding: 0.12rem 0.4rem;
+    font-size: 0.9em;
+    font-weight: 600;
+  }
+
+  :global(.prose :not(pre) > code::before),
+  :global(.prose :not(pre) > code::after) {
+    content: "";
+  }
+
+  :global(.prose pre) {
+    background: #0f172a;
+    border: 1px solid rgba(122, 162, 247, 0.35);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    overflow-x: auto;
+  }
+
+  :global(.prose pre code) {
+    color: #d7e3ff;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font-size: 0.9rem;
+  }
+</style>

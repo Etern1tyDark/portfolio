@@ -1,0 +1,239 @@
+{
+  "experiences": [
+    {
+      "period": "2023 - Present",
+      "title": "Cryptography Stream Lead & Player",
+      "company": "Heroes Cyber Security (HCS)",
+      "description": "Lead and compete in the cryptography stream for HCS, one of Indonesia's top-ranked CTF teams.",
+      "tags": [
+        "CTF",
+        "Cryptography",
+        "Forensics"
+      ]
+    },
+    {
+      "period": "2025 - 2026",
+      "title": "Assistant Lecturer",
+      "company": "Sepuluh Nopember Institute of Technology",
+      "description": "Assisted classes for Information Asset Protection, Operating Systems, Data Structures and Object-Oriented Programming, Ethical Hacking and Penetration Testing, and Cloud Computing Technology.",
+      "tags": [
+        "Teaching",
+        "Mentoring",
+        "Cybersecurity",
+        "Systems"
+      ]
+    },
+    {
+      "period": "2024 - 2026",
+      "title": "CTF Challenge Developer",
+      "company": "ARA, ICS Cyber Siege, Schematics NPC",
+      "description": "Designed and supported cryptography challenges for ARA 6.0 (2), ICS Cyber Siege 2025 (1), Schematics NPC CTF 2025 (3), and ARA 7.0 CTF 2026 (2).",
+      "tags": [
+        "Challenge Authoring",
+        "Cryptography"
+      ]
+    },
+    {
+      "period": "2024 - 2026",
+      "title": "Software Engineer / Programmer",
+      "company": "Banyubramanta ITS",
+      "description": "Improved ROV/AUV systems using STM32 with ROS2, OpenCV, and YOLOv5, and built a UI to speed up behavior-tree construction for missions.",
+      "tags": [
+        "ROS2",
+        "OpenCV",
+        "YOLOv5",
+        "Systems"
+      ]
+    }
+  ],
+  "awards": [
+    {
+      "result": "2nd Place",
+      "event": "ARKAVIDIA 10.0 CTF",
+      "date": "Mar 2026",
+      "awardedBy": "Institut Teknologi Bandung",
+      "scope": "National",
+      "description": "Placed second in ITB's flagship national CTF (sponsored by Xendit) as part of Heroes Cyber Security.",
+      "gallery": [
+        "/images/awards/arkav.jpg",
+        "/images/awards/arkav2.jpg"
+      ]
+    },
+    {
+      "result": "3rd Place",
+      "event": "HOLOGY 8.0 CTF",
+      "date": "Oct 2025",
+      "awardedBy": "Universitas Brawijaya",
+      "scope": "National",
+      "description": "Secured third place in this national CTF as part of Heroes Cyber Security.",
+      "gallery": [
+        "/images/awards/hology.jpg",
+        "/images/awards/hology2.jpg"
+      ]
+    },
+    {
+      "result": "2nd Place",
+      "event": "HackToday CTF 2025",
+      "date": "Sep 2025",
+      "awardedBy": "Institut Pertanian Bandung",
+      "scope": "National",
+      "description": "Finished second in this national CTF as part of Heroes Cyber Security.",
+      "gallery": [
+        "/images/awards/hacktoday.jpg",
+        "/images/awards/hacktoday2.jpg"
+      ]
+    },
+    {
+      "result": "3rd Place",
+      "event": "Meta4Sec Cyber Ops Clash CTF 2.0",
+      "date": "Aug 2025",
+      "awardedBy": "Meta4Sec & redlimit",
+      "scope": "National",
+      "description": "Won third place in this national CTF competition as part of Heroes Cyber Security.",
+      "gallery": [
+        "/images/awards/meta4sec.jpg"
+      ]
+    },
+    {
+      "result": "Top 5",
+      "event": "Standoff 15 for Blue Teams",
+      "date": "Apr 2025",
+      "awardedBy": "Standoff 365 Team & Positive Technologies",
+      "scope": "Global",
+      "description": "Reached top 5 in an international cyber battle as part of Heroes Cyber Security.",
+      "gallery": [
+        "/images/awards/standoff-15-for-blue-teams.svg",
+        "/images/awards/standoff-15-for-blue-teams-2.svg"
+      ]
+    },
+    {
+      "result": "Best Writeup & Top 10",
+      "event": "RECURSION CTF 1.0",
+      "date": "Apr 2025",
+      "awardedBy": "Universitas Hasanuddin",
+      "scope": "National",
+      "description": "Recognized for clear and deep challenge solution documentation as part of Heroes Cyber Security.",
+      "gallery": [
+        "/images/awards/recursion.jpg",
+        "/images/awards/recursion2.jpg"
+      ]
+    },
+    {
+      "result": "2nd Place",
+      "event": "AI vs Human CTF",
+      "date": "Mar 2025",
+      "awardedBy": "Hack The Box",
+      "scope": "Global",
+      "description": "Took second place in an international CTF against AI agents and human teams as part of Heroes Cyber Security.",
+      "gallery": [
+        "/images/awards/aivshuman.jpg"
+      ]
+    },
+    {
+      "result": "3rd Place",
+      "event": "National Cyber Week CTF",
+      "date": "Nov 2024",
+      "awardedBy": "BINUS University",
+      "scope": "National",
+      "description": "Placed third in BINUS University's national CTF as part of Heroes Cyber Security.",
+      "gallery": [
+        "/images/awards/ncw.jpg",
+        "/images/awards/ncw2.jpg",
+        "/images/awards/ncw3.jpg"
+      ]
+    },
+    {
+      "result": "1st Place / Best Strategy",
+      "event": "Kontes Robot Bawah Air Indonesia (KRBAI)",
+      "date": "Jun 2024",
+      "awardedBy": "Puspresnas / Ministry of Education, Culture, Research, and Technology",
+      "scope": "National",
+      "description": "Won national underwater robotics competition with a best-strategy recognition as part of Banyubramanta ITS.",
+      "gallery": [
+        "/images/awards/krbai.jpg",
+        "/images/awards/krbai2.jpg"
+      ]
+    }
+  ],
+  "otherAwards": [
+    {
+      "result": "Finalist",
+      "event": "GEMASTIK Division II (Cyber Security)",
+      "date": "2024 & 2025"
+    },
+    {
+      "result": "Top 10",
+      "event": "National Cyber Week CTF",
+      "date": "2025"
+    },
+    {
+      "result": "Top 10",
+      "event": "Cyber Breaker Development (CBD) CTF",
+      "date": "2025"
+    },
+    {
+      "result": "Top 10",
+      "event": "ARKAVIDIA 9.0 CTF",
+      "date": "2025"
+    },
+    {
+      "result": "Top 4",
+      "event": "Netcomp 3.0 CTF",
+      "date": "2024"
+    }
+  ],
+  "projects": [
+    {
+      "title": "Personal Website",
+      "subtitle": "This page you're currently looking on. Portfolio website built with Astro, Tailwind, and DaisyUI components, with .mdx support.",
+      "link": "/",
+      "gallery": [
+        "/images/projects/portfolio.png",
+        "/images/projects/portfolio2.png",
+        "/images/projects/portfolio3.png",
+        "/images/projects/portfolio4.png"
+      ]
+    },
+    {
+      "title": "Licky Mobile App",
+      "subtitle": "An Android-based mobile application that leverages machine learning to analyze tongue images and detect potential health conditions.",
+      "link": "https://github.com/KenetHilang/Licky-Mobile-App",
+      "gallery": [
+        "/images/projects/licky-mobile-app.svg",
+        "/images/projects/licky-mobile-app-2.svg"
+      ]
+    },
+    {
+      "title": "Attendance System",
+      "subtitle": "Attendance tracking system built with Next.js in the form of a web dashboard for monitoring and management by students/teachers.",
+      "link": "https://github.com/Etern1tyDark/attendance-system",
+      "gallery": [
+        "/images/projects/attendance.png"
+      ]
+    },
+    {
+      "title": "eter-windows",
+      "subtitle": "My personal highly customized Windows setup, using GlazeWM and Zebar.",
+      "link": "https://github.com/Etern1tyDark/eter-windows",
+      "gallery": [
+        "/images/projects/windows.png",
+        "/images/projects/windows2.png"
+      ]
+    },
+    {
+      "title": "eter-kali-wsl",
+      "subtitle": "My personal workflow for using Kali Linux in WSL, with heavily customized dotfiles.",
+      "link": "https://github.com/Etern1tyDark/eter-kali-wsl/",
+      "gallery": [
+        "/images/projects/kali.png"
+      ]
+    }
+  ],
+  "committees": [
+    "Head of IT Olympiad (ARA 7.0), Sep 2025 – Mar 2026",
+    "Expert Staff, IT Olympiad (ARA 6.0), Oct 2024 – May 2025",
+    "Staff, IT Olympiad (ARA 5.0), Oct 2023 – May 2024",
+    "Intern, Research & Technology Dept (HMIT ITS), Nov 2024 – Feb 2025",
+    "Staff of Mentor (INCLENATION 2024), Aug 2024"
+  ]
+}
