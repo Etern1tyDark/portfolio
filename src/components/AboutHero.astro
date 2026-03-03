@@ -1,3 +1,7 @@
+---
+import { withBasePath } from '../utils/withBasePath';
+---
+
 <section class="hero min-h-[50vh] hero-tones about-hero">
   <div class="hero-content about-hero-content">
     <div class="about-grid">
@@ -11,7 +15,7 @@
 
       <aside class="photo-card" aria-label="Profile photograph placeholder">
         <div class="photo-placeholder" role="img" aria-label="Photograph placeholder">
-          <img src="/images/me.jpeg" alt="Profile placeholder image" />
+          <img src={withBasePath('/images/me.jpeg')} alt="Profile placeholder image" />
         </div>
       </aside>
     </div>

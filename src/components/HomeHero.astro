@@ -1,4 +1,6 @@
 ---
+import { withBasePath } from '../utils/withBasePath';
+
 const titleVariants = [
   "Hello!",
   "Welcome!",
@@ -38,8 +40,8 @@ const rhythmInputKey = "F";
         I'm Nathan, a third-year Information Technology student focused on cybersecurity, with active work in cryptography, forensics, red teaming, and software development.
       </p>
       <div class="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center mt-8 hero-cta px-4 sm:px-0">
-        <a href="/blog" class="btn btn-primary px-8 py-3 text-lg sm:text-xl rounded-xl w-full sm:w-auto">View Blogs</a>
-        <a href="/experience" class="btn btn-outline px-8 py-3 text-lg sm:text-xl rounded-xl transition-all w-full sm:w-auto">Experience</a>
+        <a href={withBasePath('/blog')} class="btn btn-primary px-8 py-3 text-lg sm:text-xl rounded-xl w-full sm:w-auto">View Blogs</a>
+        <a href={withBasePath('/experience')} class="btn btn-outline px-8 py-3 text-lg sm:text-xl rounded-xl transition-all w-full sm:w-auto">Experience</a>
       </div>
 
       <!-- <div class="hero-meta" data-stagger-group>

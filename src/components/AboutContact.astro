@@ -1,3 +1,7 @@
+---
+import { withBasePath } from '../utils/withBasePath';
+---
+
 <section class="about-contact" data-stagger-group>
   <div class="contact-header reveal-up">
     <p class="eyebrow">Contact</p>
@@ -24,7 +28,7 @@
   </div>
 
   <div class="cv-cta-wrap">
-    <a class="btn btn-primary cv-btn-long" href="/CV.pdf" download="Nathan-Kho-Pancras-CV.pdf">Download CV</a>
+    <a class="btn btn-primary cv-btn-long" href={withBasePath('/CV.pdf')} download="Nathan-Kho-Pancras-CV.pdf">Download CV</a>
   </div>
 </section>
 

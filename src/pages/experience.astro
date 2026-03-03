@@ -7,14 +7,15 @@ import ExperienceHighlights from '../components/ExperienceHighlights.astro';
 import ExperienceSpeakingProjects from '../components/ExperienceSpeakingProjects.astro';
 import ExperienceCommittees from '../components/ExperienceCommittees.astro';
 import experienceData from '../data/experience.json';
+import { withBasePath } from '../utils/withBasePath';
 
-const site = Astro.site ?? new URL('https://yourusername.pages.dev');
+const site = Astro.site ?? new URL('https://etern1ty.site');
 const description =
   'Experience timeline, awards, committees, and projects by Nathan Kho Pancras in cybersecurity and systems engineering.';
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
-  url: new URL('/experience', site).href,
+  url: new URL(withBasePath('/experience'), site).href,
   name: 'Experience | Nathan Kho Pancras (eter) | Portfolio',
   description,
 };

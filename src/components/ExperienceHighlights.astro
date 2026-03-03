@@ -1,4 +1,6 @@
 ---
+import { withBasePath } from '../utils/withBasePath';
+
 interface AwardItem {
   result: string;
   event: string;
@@ -18,6 +20,7 @@ interface Props {
   otherAwards: OtherAwardItem[];
 }
 const { awards, otherAwards } = Astro.props;
+const resolveSrc = (path: string) => (path.startsWith('/') ? withBasePath(path) : path);
 ---
 
 <div class="stack-gap">
@@ -29,7 +32,7 @@ const { awards, otherAwards } = Astro.props;
           <div class="carousel w-full rounded-lg award-carousel">
             {(award.gallery ?? []).map((image) => (
               <div class="carousel-item relative w-full" data-slide>
-                <img class="award-photo" src={image} alt={`${award.event} gallery image`} loading="lazy" />
+                <img class="award-photo" src={resolveSrc(image)} alt={`${award.event} gallery image`} loading="lazy" />
               </div>
             ))}
           </div>

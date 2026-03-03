@@ -1,4 +1,6 @@
 ---
+import { withBasePath } from '../utils/withBasePath';
+
 interface ProjectItem {
   title: string;
   subtitle: string;
@@ -9,6 +11,8 @@ interface Props {
   projects: ProjectItem[];
 }
 const { projects } = Astro.props;
+const isExternal = (path: string) => path.startsWith('http://') || path.startsWith('https://');
+const resolvePath = (path: string) => (path.startsWith('/') ? withBasePath(path) : path);
 ---
 
 <div class="stack-gap">
@@ -20,7 +24,7 @@ const { projects } = Astro.props;
           <div class="carousel w-full rounded-lg project-carousel">
             {(project.gallery ?? []).map((image) => (
               <div class="carousel-item relative w-full" data-slide>
-                <img class="project-photo" src={image} alt={`${project.title} gallery image`} loading="lazy" />
+                <img class="project-photo" src={resolvePath(image)} alt={`${project.title} gallery image`} loading="lazy" />
               </div>
             ))}
           </div>
@@ -44,7 +48,7 @@ const { projects } = Astro.props;
           </div>
         )}
 
-        <a class="btn btn-outline px-4 py-2 rounded-lg" href={project.link} target={project.link.startsWith('http') ? '_blank' : undefined} rel={project.link.startsWith('http') ? 'noopener noreferrer' : undefined}>
+        <a class="btn btn-outline px-4 py-2 rounded-lg" href={resolvePath(project.link)} target={isExternal(project.link) ? '_blank' : undefined} rel={isExternal(project.link) ? 'noopener noreferrer' : undefined}>
           {project.link === '/' ? 'Open Website' : 'View on GitHub'}
         </a>
       </article>

@@ -1,5 +1,6 @@
 ---
 import ThemeToggle from './ThemeToggle.astro';
+import { withBasePath } from '../utils/withBasePath';
 
 const { currentPath = '/' } = Astro.props;
 
@@ -9,13 +10,14 @@ const navItems = [
   { path: '/experience', label: 'Experience' },
   { path: '/blog', label: 'Blogs' },
 ];
+const toBase = (path: string) => withBasePath(path);
 ---
 
 <nav class="bg-gray-900 bg-opacity-80 backdrop-blur-md sticky top-0 z-50">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16">
       <div class="flex items-center w-40 shrink-0">
-        <a href="/" class="text-xl font-bold text-blue-400 font-mono whitespace-nowrap">
+        <a href={toBase('/')} class="text-xl font-bold text-blue-400 font-mono whitespace-nowrap">
           <span class="text-gray-400">~/</span><span id="typewriter-portfolio"></span><span class="animate-pulse">_</span>
         </a>
       </div>
@@ -23,7 +25,7 @@ const navItems = [
       <div class="hidden md:block">
         <div class="ml-10 flex items-baseline space-x-4">
           {navItems.map((item) => (
-            <a href={item.path} class={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            <a href={toBase(item.path)} class={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
               currentPath === item.path 
                 ? 'bg-gray-800 text-blue-400' 
                 : 'text-gray-300 hover:bg-gray-700 hover:text-white'
@@ -52,7 +54,7 @@ const navItems = [
   <div id="mobile-menu" class="md:hidden border-t border-gray-800 bg-gray-900 bg-opacity-95 backdrop-blur-md hidden">
     <div class="px-4 pt-2 pb-4 space-y-1">
       {navItems.map((item) => (
-        <a href={item.path} class={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+        <a href={toBase(item.path)} class={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
           currentPath === item.path 
             ? 'bg-gray-800 text-blue-400' 
             : 'text-gray-200 hover:bg-gray-800 hover:text-white'

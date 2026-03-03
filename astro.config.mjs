@@ -5,17 +5,25 @@ import astroIcon from 'astro-icon';
 import sitemap from '@astrojs/sitemap';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import rehypePrefixBase from './src/utils/rehypePrefixBase.mjs';
 
-const site = process.env.SITE_URL ?? 'https://yourusername.pages.dev';
+const site = process.env.SITE_URL ?? 'https://etern1ty.site';
+const base = process.env.BASE_PATH ?? '/portfolio';
 
 export default defineConfig({
+  markdown: {
+    syntaxHighlight: 'shiki',
+    shikiConfig: {
+      theme: 'tokyo-night',
+    },
+  },
   integrations: [
     tailwind({
       config: './tailwind.config.mjs',
     }),
     mdx({
       remarkPlugins: [remarkMath],
-      rehypePlugins: [rehypeKatex],
+      rehypePlugins: [rehypeKatex, [rehypePrefixBase, { base }]],
     }),
     sitemap(),
     astroIcon(),
@@ -31,6 +39,6 @@ export default defineConfig({
       include: ['gsap'],
     },
   },
-  site: 'https://etern1tydark.github.io',
-  base: '/portfolio',
+  site,
+  base,
 });

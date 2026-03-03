@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build && node scripts/sanitize-dist.mjs",
+    "build:github": "SITE_URL=https://etern1tydark.github.io BASE_PATH=/portfolio astro build && node scripts/sanitize-dist.mjs",
+    "build:site": "SITE_URL=https://etern1ty.site BASE_PATH=/ astro build && node scripts/sanitize-dist.mjs",
     "preview": "astro preview",
     "astro": "astro"
   },

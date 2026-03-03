@@ -2,8 +2,9 @@
 import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.astro';
 import HomeHero from '../components/HomeHero.astro';
+import { withBasePath } from '../utils/withBasePath';
 
-const site = Astro.site ?? new URL('https://yourusername.pages.dev');
+const site = Astro.site ?? new URL('https://etern1ty.site');
 const description =
   'Nathan Kho Pancras - cybersecurity portfolio featuring CTF work, cryptography, digital forensics, red teaming, and software projects.';
 const jsonLd = [
@@ -11,14 +12,14 @@ const jsonLd = [
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'Nathan Kho Pancras',
-    url: new URL('/', site).href,
+    url: new URL(withBasePath('/'), site).href,
     inLanguage: 'en',
   },
   {
     '@context': 'https://schema.org',
     '@type': 'Person',
     name: 'Nathan Kho Pancras',
-    url: new URL('/', site).href,
+    url: new URL(withBasePath('/'), site).href,
     jobTitle: 'Cybersecurity Student',
     sameAs: [
       'https://github.com/Etern1tyDark',

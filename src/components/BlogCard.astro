@@ -1,12 +1,13 @@
 ---
 import type { CollectionEntry } from 'astro:content';
+import { withBasePath } from '../utils/withBasePath';
 interface Props {
   post: CollectionEntry<'posts'>;
 }
 const { post } = Astro.props;
 ---
 
-<a href={`/blog/${post.slug}`} class="card hover:shadow-2xl transition-all duration-300 p-6 blog-card group" data-stagger-item>
+<a href={withBasePath(`/blog/${post.slug}`)} class="card hover:shadow-2xl transition-all duration-300 p-6 blog-card group" data-stagger-item>
   <h2 class="text-xl font-bold mb-3 text-blue-400 group-hover:text-purple-400 transition-colors">
     {post.data.title}
   </h2>

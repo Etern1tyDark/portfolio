@@ -3,14 +3,15 @@ import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.astro';
 import BlogHero from '../components/BlogHero.astro';
 import BlogList from '../components/BlogList.astro';
+import { withBasePath } from '../utils/withBasePath';
 
-const site = Astro.site ?? new URL('https://yourusername.pages.dev');
+const site = Astro.site ?? new URL('https://etern1ty.site');
 const description =
   'CTF writeups and technical notes by Nathan Kho Pancras, focused on cryptography, reversing, pwn, and security practice.';
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Blog',
-  url: new URL('/blog', site).href,
+  url: new URL(withBasePath('/blog'), site).href,
   name: 'Blogs | Nathan Kho Pancras (eter) | Portfolio',
   description,
 };

@@ -5,19 +5,20 @@ import AboutHero from '../components/AboutHero.astro';
 import AboutSkillsGrid from '../components/AboutSkillsGrid.astro';
 import AboutMore from '../components/AboutMore.astro';
 import AboutContact from '../components/AboutContact.astro';
+import { withBasePath } from '../utils/withBasePath';
 
-const site = Astro.site ?? new URL('https://yourusername.pages.dev');
+const site = Astro.site ?? new URL('https://etern1ty.site');
 const description =
   'About Nathan Kho Pancras (eter) | Portfolio';
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'ProfilePage',
-  url: new URL('/about', site).href,
+  url: new URL(withBasePath('/about'), site).href,
   name: 'About Nathan Kho Pancras (eter) | Portfolio',
   mainEntity: {
     '@type': 'Person',
     name: 'Nathan Kho Pancras',
-    url: new URL('/', site).href,
+    url: new URL(withBasePath('/'), site).href,
     sameAs: [
       'https://github.com/Etern1tyDark',
       'https://github.com/NathanKhoP',
