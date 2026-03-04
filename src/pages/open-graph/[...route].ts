@@ -38,7 +38,7 @@ export const { getStaticPaths, GET } = await OGImageRoute({
     title: page.title,
     description: page.description,
     logo: {
-      path: './src/assets/images/logo.jpg',
+      path: './src/assets/images/logo.webp',
       size: [200],
     },
     fonts: ['./src/assets/fonts/DejaVuSans.ttf', './src/assets/fonts/DejaVuSans-Bold.ttf'],
