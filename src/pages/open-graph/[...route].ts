@@ -5,19 +5,19 @@ const posts = await getCollection('posts');
 
 const pages = {
   index: {
-    title: 'eter\'s space',
-    description: 'Nathan Kho Pancras',
+    title: '~/eter',
+    description: 'eter\'s space',
   },
   about: {
-    title: 'eter - About',
+    title: '~/eter/about',
     description: 'About eter - Nathan Kho Pancras',
   },
   experience: {
-    title: 'eter - Experience',
+    title: '~/eter/experience',
     description: 'Experience, awards, and projects.',
   },
   blog: {
-    title: 'eter - Blogs',
+    title: '~/eter/blog',
     description: 'eter\'s personal blogs.',
   },
   ...Object.fromEntries(
@@ -37,6 +37,10 @@ export const { getStaticPaths, GET } = await OGImageRoute({
   getImageOptions: (path, page) => ({
     title: page.title,
     description: page.description,
+    logo: {
+      path: './src/assets/images/logo.jpg',
+      size: [200],
+    },
     fonts: ['./src/assets/fonts/DejaVuSans.ttf', './src/assets/fonts/DejaVuSans-Bold.ttf'],
     bgGradient: path.startsWith('blog/')
       ? [

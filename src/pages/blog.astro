@@ -7,7 +7,7 @@ import { withBasePath } from '../utils/withBasePath';
 
 const site = Astro.site ?? new URL('https://etern1ty.site');
 const description =
-  'CTF writeups and technical notes by Nathan Kho Pancras, focused on cryptography, reversing, pwn, and security practice.';
+  'eter\'s personal blogs.';
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'Blog',
@@ -16,7 +16,7 @@ const jsonLd = {
   description,
 };
 ---
-<Layout title="Blogs | Cybersecurity Portfolio" description={description} canonicalPath="/blog" jsonLd={jsonLd}>
+<Layout title="Blogs | Nathan Kho Pancras (eter) | Portfolio" description={description} canonicalPath="/blog" jsonLd={jsonLd}>
   <Navbar currentPath="/blog" />
   <main class="min-h-screen">
     <BlogHero />
