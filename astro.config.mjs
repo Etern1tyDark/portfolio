@@ -8,7 +8,7 @@ import rehypeKatex from 'rehype-katex';
 import rehypePrefixBase from './src/utils/rehypePrefixBase.mjs';
 
 const site = process.env.SITE_URL ?? 'https://etern1ty.site';
-const base = process.env.BASE_PATH ?? '/portfolio';
+const base = process.env.BASE_PATH ?? '/';
 
 export default defineConfig({
   markdown: {
