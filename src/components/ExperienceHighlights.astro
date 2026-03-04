@@ -1,5 +1,6 @@
 ---
-import { withBasePath } from '../utils/withBasePath';
+import { Image } from 'astro:assets';
+import { resolveImageAsset } from '../utils/imageManifest';
 
 interface AwardItem {
   result: string;
@@ -20,7 +21,7 @@ interface Props {
   otherAwards: OtherAwardItem[];
 }
 const { awards, otherAwards } = Astro.props;
-const resolveSrc = (path: string) => (path.startsWith('/') ? withBasePath(path) : path);
+const isSvg = (path: string) => path.toLowerCase().endsWith('.svg');
 ---
 
 <div class="stack-gap">
@@ -30,11 +31,20 @@ const resolveSrc = (path: string) => (path.startsWith('/') ? withBasePath(path) 
       <article class="card p-6 achievement-card award-card" data-stagger-item>
         <div class="award-carousel-wrap" data-award-carousel>
           <div class="carousel w-full rounded-lg award-carousel">
-            {(award.gallery ?? []).map((image) => (
-              <div class="carousel-item relative w-full" data-slide>
-                <img class="award-photo" src={resolveSrc(image)} alt={`${award.event} gallery image`} loading="lazy" />
-              </div>
-            ))}
+            {(award.gallery ?? []).map((image, index) => {
+              const imageSrc = resolveImageAsset(image);
+              const imageAlt = `${award.event} slide ${index + 1}`;
+
+              return (
+                <div class="carousel-item relative w-full" data-slide>
+                  {isSvg(image) ? (
+                    <Image class="award-photo" src={imageSrc} alt={imageAlt} loading="lazy" decoding="async" />
+                  ) : (
+                    <Image class="award-photo" src={imageSrc} alt={imageAlt} loading="lazy" decoding="async" format="webp" quality={80} />
+                  )}
+                </div>
+              );
+            })}
           </div>
           {(award.gallery?.length ?? 0) > 1 && (
             <div class="carousel-controls">

@@ -227,6 +227,16 @@
       "gallery": [
         "/images/projects/kali.png"
       ]
+    },
+    {
+      "title": "ECC-Signer",
+      "subtitle": "A digital signing system using ECDSA-SECP256k1 for any files.",
+      "link": "https://github.com/NathanKhoP/ECC-Signer",
+      "gallery": [
+        "/images/projects/ecc.png",
+        "/images/projects/ecc2.png",
+        "/images/projects/ecc3.png"
+      ]
     }
   ],
   "committees": [

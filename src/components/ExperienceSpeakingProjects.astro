@@ -1,5 +1,7 @@
 ---
+import { Image } from 'astro:assets';
 import { withBasePath } from '../utils/withBasePath';
+import { resolveImageAsset } from '../utils/imageManifest';
 
 interface ProjectItem {
   title: string;
@@ -13,6 +15,7 @@ interface Props {
 const { projects } = Astro.props;
 const isExternal = (path: string) => path.startsWith('http://') || path.startsWith('https://');
 const resolvePath = (path: string) => (path.startsWith('/') ? withBasePath(path) : path);
+const isSvg = (path: string) => path.toLowerCase().endsWith('.svg');
 ---
 
 <div class="stack-gap">
@@ -22,11 +25,20 @@ const resolvePath = (path: string) => (path.startsWith('/') ? withBasePath(path)
       <article class="card p-6 achievement-card project-card" data-stagger-item>
         <div class="project-carousel-wrap" data-project-carousel>
           <div class="carousel w-full rounded-lg project-carousel">
-            {(project.gallery ?? []).map((image) => (
-              <div class="carousel-item relative w-full" data-slide>
-                <img class="project-photo" src={resolvePath(image)} alt={`${project.title} gallery image`} loading="lazy" />
-              </div>
-            ))}
+            {(project.gallery ?? []).map((image, index) => {
+              const imageSrc = resolveImageAsset(image);
+              const imageAlt = `${project.title} preview ${index + 1}`;
+
+              return (
+                <div class="carousel-item relative w-full" data-slide>
+                  {isSvg(image) ? (
+                    <Image class="project-photo" src={imageSrc} alt={imageAlt} loading="lazy" decoding="async" />
+                  ) : (
+                    <Image class="project-photo" src={imageSrc} alt={imageAlt} loading="lazy" decoding="async" format="webp" quality={80} />
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {(project.gallery?.length ?? 0) > 1 && (

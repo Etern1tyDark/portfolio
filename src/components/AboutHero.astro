@@ -1,5 +1,6 @@
 ---
-import { withBasePath } from '../utils/withBasePath';
+import { Image } from 'astro:assets';
+import profileImage from '../assets/images/me.jpeg';
 ---
 
 <section class="hero min-h-[50vh] hero-tones about-hero">
@@ -9,13 +10,24 @@ import { withBasePath } from '../utils/withBasePath';
         <p class="eyebrow">About</p>
         <h1 class="text-5xl font-bold text-blue-400 mb-4 hero-title pt-1">Nathan Kho Pancras</h1>
         <p class="py-2 text-lg text-gray-300 hero-subtitle">
-          Third-year Information Technology student with a strong focus on cybersecurity, especially cryptography, forensics, and red teaming, while still building reliable systems across software and robotics stacks.
+          Third-year Information Technology student (18) with a strong focus on cybersecurity, especially cryptography, forensics, and red teaming, while still building reliable systems across software and robotics stacks.
         </p>
       </div>
 
       <aside class="photo-card" aria-label="Profile photograph placeholder">
         <div class="photo-placeholder" role="img" aria-label="Photograph placeholder">
-          <img src={withBasePath('/images/me.jpeg')} alt="Profile placeholder image" />
+          <Image
+            src={profileImage}
+            alt="Nathan Kho Pancras"
+            class="profile-photo"
+            loading="eager"
+            decoding="async"
+            fetchpriority="high"
+            widths={[192, 320, 480]}
+            sizes="(max-width: 900px) 42vw, 190px"
+            format="webp"
+            quality={80}
+          />
         </div>
       </aside>
     </div>
@@ -23,10 +35,14 @@ import { withBasePath } from '../utils/withBasePath';
 </section>
 
 <style>
+  .about-hero {
+    padding-top: 0.75rem;
+  }
+
   .about-hero-content {
     max-width: 72rem;
     width: 100%;
-    padding: 0 1rem;
+    padding: 1.5rem 1rem 2rem;
     text-align: left;
   }
 
@@ -61,7 +77,7 @@ import { withBasePath } from '../utils/withBasePath';
     overflow: hidden;
   }
 
-  .photo-placeholder img {
+  .profile-photo {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -84,12 +100,26 @@ import { withBasePath } from '../utils/withBasePath';
   }
 
   @media (max-width: 900px) {
+    .about-hero {
+      padding-top: 1rem;
+    }
+
+    .about-hero-content {
+      padding-top: 1.75rem;
+      padding-bottom: 2.5rem;
+    }
+
     .about-grid {
       grid-template-columns: 1fr;
     }
 
     .about-copy {
       text-align: center;
+    }
+
+    .photo-card {
+      margin-top: 0.75rem;
+      padding-bottom: 0.35rem;
     }
   }
 </style>

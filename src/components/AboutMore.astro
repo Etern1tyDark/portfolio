@@ -30,7 +30,7 @@ import rhythmGames from '../data/rhythmGames.json';
               {game.gallery.map((image, index) => {
                 return (
                   <div class="carousel-item relative w-full" data-slide>
-                    <img class="game-photo" src={image} alt={`${game.title} photo ${index + 1}`} loading="lazy" />
+                    <Image class="game-photo" src={image} alt={`${game.title} ${index + 1}`} loading="lazy" decoding="async" />
                   </div>
                 );
               })}
