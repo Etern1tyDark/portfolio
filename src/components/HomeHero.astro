@@ -106,6 +106,8 @@ const rhythmInputKey = "F";
       const judgementLine = document.getElementById("judgement-line");
       const judgementLabel = document.getElementById("rhythm-judgement");
       if (!lane || !stream || !judgementLine || !judgementLabel) return () => {};
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const isPageActive = () => document.visibilityState === "visible" && document.hasFocus();
 
       let laneWidth = 0;
       let judgementX = 0;
@@ -117,6 +119,20 @@ const rhythmInputKey = "F";
       let lastFrame = 0;
 
       const notes = [];
+
+      const clearLoopHandles = () => {
+        window.cancelAnimationFrame(rafId);
+        window.clearTimeout(spawnTimer);
+        rafId = 0;
+        spawnTimer = 0;
+      };
+
+      const clearLane = () => {
+        clearLoopHandles();
+        notes.length = 0;
+        stream.innerHTML = "";
+        lastFrame = 0;
+      };
 
       const recalcMetrics = () => {
         const laneRect = lane.getBoundingClientRect();
@@ -266,6 +282,11 @@ const rhythmInputKey = "F";
       };
 
       const frame = (now) => {
+        if (!isPageActive()) {
+          clearLoopHandles();
+          lastFrame = 0;
+          return;
+        }
         if (!lastFrame) lastFrame = now;
         const dt = Math.min(50, now - lastFrame);
         lastFrame = now;
@@ -274,6 +295,7 @@ const rhythmInputKey = "F";
       };
 
       const scheduleSpawn = () => {
+        if (!isPageActive()) return;
         const note = spawnNote();
         const gapMs = (note.width + NOTE_GAP_PX) / note.speedPxPerMs;
         const nextDelay = Math.max(SPAWN_INTERVAL_MS, Math.round(gapMs));
@@ -281,10 +303,11 @@ const rhythmInputKey = "F";
       };
 
       const start = () => {
+        if (!isPageActive()) return;
         recalcMetrics();
-        stream.innerHTML = "";
+        clearLane();
 
-        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        if (prefersReducedMotion.matches) {
           const staticNote = buildNoteElement(lanePhrases[0]);
           staticNote.classList.add("rhythm-note-static");
           stream.appendChild(staticNote);
@@ -297,11 +320,24 @@ const rhythmInputKey = "F";
         rafId = window.requestAnimationFrame(frame);
       };
 
+      const handleActivityChange = () => {
+        if (isPageActive()) {
+          start();
+        } else {
+          clearLane();
+        }
+      };
+
       const fontsReady = "fonts" in document ? document.fonts.ready : Promise.resolve();
-      fontsReady.then(start);
+      fontsReady.then(() => {
+        handleActivityChange();
+      });
 
       window.addEventListener("resize", recalcMetrics);
       window.addEventListener("keydown", onKeyDown);
+      document.addEventListener("visibilitychange", handleActivityChange);
+      window.addEventListener("focus", handleActivityChange);
+      window.addEventListener("blur", handleActivityChange);
 
       const onMobileTap = (e) => {
         e.preventDefault();
@@ -316,11 +352,13 @@ const rhythmInputKey = "F";
       return () => {
         window.removeEventListener("resize", recalcMetrics);
         window.removeEventListener("keydown", onKeyDown);
+        document.removeEventListener("visibilitychange", handleActivityChange);
+        window.removeEventListener("focus", handleActivityChange);
+        window.removeEventListener("blur", handleActivityChange);
         if (mobileBtn) {
           mobileBtn.removeEventListener("pointerdown", onMobileTap);
         }
-        window.cancelAnimationFrame(rafId);
-        window.clearTimeout(spawnTimer);
+        clearLoopHandles();
         window.clearTimeout(clearHitTimer);
         window.clearTimeout(clearJudgeTimer);
         stream.innerHTML = "";

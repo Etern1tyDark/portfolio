@@ -55,8 +55,8 @@
       "scope": "National",
       "description": "Placed second in ITB's flagship national CTF (sponsored by Xendit) as part of Heroes Cyber Security.",
       "gallery": [
-        "/images/awards/arkav.jpg",
-        "/images/awards/arkav2.jpg"
+        "/images/awards/arkav.webp",
+        "/images/awards/arkav2.webp"
       ]
     },
     {
@@ -67,8 +67,8 @@
       "scope": "National",
       "description": "Secured third place in this national CTF as part of Heroes Cyber Security.",
       "gallery": [
-        "/images/awards/hology.jpg",
-        "/images/awards/hology2.jpg"
+        "/images/awards/hology.webp",
+        "/images/awards/hology2.webp"
       ]
     },
     {
@@ -79,8 +79,8 @@
       "scope": "National",
       "description": "Finished second in this national CTF as part of Heroes Cyber Security.",
       "gallery": [
-        "/images/awards/hacktoday.jpg",
-        "/images/awards/hacktoday2.jpg"
+        "/images/awards/hacktoday.webp",
+        "/images/awards/hacktoday2.webp"
       ]
     },
     {
@@ -91,7 +91,7 @@
       "scope": "National",
       "description": "Won third place in this national CTF competition as part of Heroes Cyber Security.",
       "gallery": [
-        "/images/awards/meta4sec.jpg"
+        "/images/awards/meta4sec.webp"
       ]
     },
     {
@@ -114,8 +114,8 @@
       "scope": "National",
       "description": "Recognized for clear and deep challenge solution documentation as part of Heroes Cyber Security.",
       "gallery": [
-        "/images/awards/recursion.jpg",
-        "/images/awards/recursion2.jpg"
+        "/images/awards/recursion.webp",
+        "/images/awards/recursion2.webp"
       ]
     },
     {
@@ -126,7 +126,7 @@
       "scope": "Global",
       "description": "Took second place in an international CTF against AI agents and human teams as part of Heroes Cyber Security.",
       "gallery": [
-        "/images/awards/aivshuman.jpg"
+        "/images/awards/aivshuman.webp"
       ]
     },
     {
@@ -137,9 +137,9 @@
       "scope": "National",
       "description": "Placed third in BINUS University's national CTF as part of Heroes Cyber Security.",
       "gallery": [
-        "/images/awards/ncw.jpg",
-        "/images/awards/ncw2.jpg",
-        "/images/awards/ncw3.jpg"
+        "/images/awards/ncw.webp",
+        "/images/awards/ncw2.webp",
+        "/images/awards/ncw3.webp"
       ]
     },
     {
@@ -150,8 +150,8 @@
       "scope": "National",
       "description": "Won national underwater robotics competition with a best-strategy recognition as part of Banyubramanta ITS.",
       "gallery": [
-        "/images/awards/krbai.jpg",
-        "/images/awards/krbai2.jpg"
+        "/images/awards/krbai.webp",
+        "/images/awards/krbai2.webp"
       ]
     }
   ],
@@ -188,10 +188,10 @@
       "subtitle": "This page you're currently looking on. Portfolio website built with Astro, Tailwind, and DaisyUI components, with .mdx support.",
       "link": "/",
       "gallery": [
-        "/images/projects/portfolio.png",
-        "/images/projects/portfolio2.png",
-        "/images/projects/portfolio3.png",
-        "/images/projects/portfolio4.png"
+        "/images/projects/portfolio.webp",
+        "/images/projects/portfolio2.webp",
+        "/images/projects/portfolio3.webp",
+        "/images/projects/portfolio4.webp"
       ]
     },
     {
@@ -208,7 +208,7 @@
       "subtitle": "Attendance tracking system built with Next.js in the form of a web dashboard for monitoring and management by students/teachers.",
       "link": "https://github.com/Etern1tyDark/attendance-system",
       "gallery": [
-        "/images/projects/attendance.png"
+        "/images/projects/attendance.webp"
       ]
     },
     {
@@ -216,8 +216,8 @@
       "subtitle": "My personal highly customized Windows setup, using GlazeWM and Zebar.",
       "link": "https://github.com/Etern1tyDark/eter-windows",
       "gallery": [
-        "/images/projects/windows.png",
-        "/images/projects/windows2.png"
+        "/images/projects/windows.webp",
+        "/images/projects/windows2.webp"
       ]
     },
     {
@@ -225,7 +225,7 @@
       "subtitle": "My personal workflow for using Kali Linux in WSL, with heavily customized dotfiles.",
       "link": "https://github.com/Etern1tyDark/eter-kali-wsl/",
       "gallery": [
-        "/images/projects/kali.png"
+        "/images/projects/kali.webp"
       ]
     },
     {
@@ -233,9 +233,9 @@
       "subtitle": "A digital signing system using ECDSA-SECP256k1 for any files.",
       "link": "https://github.com/NathanKhoP/ECC-Signer",
       "gallery": [
-        "/images/projects/ecc.png",
-        "/images/projects/ecc2.png",
-        "/images/projects/ecc3.png"
+        "/images/projects/ecc.webp",
+        "/images/projects/ecc2.webp",
+        "/images/projects/ecc3.webp"
       ]
     }
   ],
