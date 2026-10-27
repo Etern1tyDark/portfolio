@@ -690,7 +690,8 @@ const hardSongs = hardTracks.map((id) => ({ id, title: music.tracks[id as keyof 
         lastRoundWholeSong = finished.wholeSong;
 
         const rect = lane.getBoundingClientRect();
-        const onScreen = rect.bottom > 0 && rect.top < window.innerHeight;
+        // A whole song is worth showing even if the player scrolled away at the end.
+        const onScreen = finished.wholeSong || (rect.bottom > 0 && rect.top < window.innerHeight);
         if (!resultsDialog || !onScreen || document.visibilityState !== "visible") return false;
 
         fillResults(finished);
@@ -916,7 +917,7 @@ const hardSongs = hardTracks.map((id) => ({ id, title: music.tracks[id as keyof 
       const start = () => {
         if (!isPageActive()) return;
         mode = currentMode();
-        if (round?.wholeSong) round = null;
+        if (round?.wholeSong && prefersReducedMotion.matches) round = null;
         recalcMetrics();
         clearLane();
 
@@ -927,8 +928,20 @@ const hardSongs = hardTracks.map((id) => ({ id, title: music.tracks[id as keyof 
           return;
         }
 
+        const previous = clock;
         clock = createClock(audio, mode);
         lastChartTime = -Infinity;
+        if (round?.wholeSong) {
+          // Blur, tab switches and the options menu restart the lane while the
+          // song plays on: keep the round, moving its end onto the new clock.
+          // A song that stopped or changed ends it (restartSong already has).
+          const now = performance.now();
+          if (previous.synced && clock.synced && clock.track === round.track) {
+            round.endAt += clock.at(now) - previous.at(now);
+          } else {
+            round = null;
+          }
+        }
         rafId = window.requestAnimationFrame(frame);
       };
 
