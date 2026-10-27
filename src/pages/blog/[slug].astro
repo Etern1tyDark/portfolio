@@ -20,7 +20,7 @@ const { post } = Astro.props;
 const { Content } = await post.render();
 const site = Astro.site ?? new URL('https://etern1ty.site');
 const canonicalPath = `/blog/${post.slug}`;
-const canonicalUrl = new URL(withBasePath(canonicalPath), site).href;
+const canonicalUrl = new URL(withBasePath(`${canonicalPath}/`), site).href;
 const publishedIso = post.data.pubDate.toISOString();
 const jsonLd = {
   '@context': 'https://schema.org',

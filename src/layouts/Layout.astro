@@ -51,7 +51,9 @@ const pagePath = canonicalPath
     ? canonicalPath
     : `/${canonicalPath}`
   : Astro.url.pathname;
-const canonicalUrl = new URL(toBasePath(pagePath), baseUrl);
+// GitHub Pages serves pages at /path/ and 301s /path there, so the canonical (and sitemap) must use the slash form.
+const withTrailingSlash = (path: string) => (path.endsWith('/') || /\.\w+$/.test(path) ? path : `${path}/`);
+const canonicalUrl = new URL(withTrailingSlash(toBasePath(pagePath)), baseUrl);
 const ogPathKey = pagePath === '/' ? 'index' : pagePath.replace(/^\/+|\/+$/g, '');
 const ogImagePath = ogImage ?? withBasePath(`/open-graph/${ogPathKey}.png`);
 const ogImageUrl = new URL(ogImagePath, baseUrl);
