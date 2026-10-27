@@ -95,8 +95,12 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
     const MIN_NOTE_INTERVAL_MS = 1850;
     // Notes land on bar lines (every `meter` beats), or every 2nd beat if unset.
     const BEAT_STEP = 2;
-    // Re-anchor the song clock when it drifts this far from audio.currentTime.
-    const CLOCK_RESYNC_MS = 35;
+    // audio.currentTime is coarse and jittery (badly so in Firefox: it can sit
+    // still for a frame, then jump ~250ms), so the song clock runs on
+    // performance.now() and is only nudged toward it by a fraction of the error
+    // per new reading. Bigger gaps (seek, stall, loop) re-anchor it outright.
+    const CLOCK_SLEW = 0.04;
+    const CLOCK_SNAP_MS = 300;
 
     // Results screen: a round starts on the first hit and ends after this many notes.
     const ROUND_NOTES = 10;
@@ -162,8 +166,8 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
     };
 
     // Song clock. While the track plays, chart time follows audio.currentTime
-    // (smoothed with performance.now(), since currentTime updates coarsely) and
-    // counts loops; otherwise it free-runs at the first section's tempo.
+    // (smoothed, see CLOCK_SLEW) and counts loops; otherwise it free-runs at the
+    // first section's tempo.
     const createClock = (audio) => {
       const playing = !!audio && !audio.paused && audio.readyState >= 2 && audio.duration > 0;
       if (!playing) {
@@ -187,12 +191,16 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         at: (perfNow) => baseChart + (perfNow - basePerf) * audio.playbackRate,
         sync(perfNow) {
           const raw = audio.currentTime * 1000;
+          // A repeated value is a stale reading, not the song standing still.
+          if (raw === lastRaw) return;
           if (raw < lastRaw - duration / 2) loops += 1;
           lastRaw = raw;
-          const actual = loops * duration + raw - timing.offsetMs;
-          if (Math.abs(actual - this.at(perfNow)) > CLOCK_RESYNC_MS) {
+          const error = loops * duration + raw - timing.offsetMs - this.at(perfNow);
+          if (Math.abs(error) > CLOCK_SNAP_MS) {
             basePerf = perfNow;
-            baseChart = actual;
+            baseChart += error;
+          } else {
+            baseChart += error * CLOCK_SLEW;
           }
         },
         beatAtOrAfter(t) {
@@ -232,6 +240,7 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
       let clearHitTimer = 0;
       let clearJudgeTimer = 0;
       let clock = createClock(null);
+      let lastChartTime = -Infinity;
       // Built and measured ahead of time; enters the lane when its lead time comes.
       let nextNote = null;
 
@@ -490,7 +499,9 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
           return;
         }
         clock.sync(now);
-        updateNotes(clock.at(now));
+        // Never let notes step backwards when the clock is nudged back.
+        lastChartTime = Math.max(lastChartTime, clock.at(now));
+        updateNotes(lastChartTime);
         if (maybeFinishRound()) return;
         rafId = window.requestAnimationFrame(frame);
       };
@@ -508,6 +519,7 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         }
 
         clock = createClock(audio);
+        lastChartTime = -Infinity;
         rafId = window.requestAnimationFrame(frame);
       };
 
