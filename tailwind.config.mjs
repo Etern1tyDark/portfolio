@@ -37,5 +37,11 @@ export default {
       },
     },
   },
-  plugins: [require('daisyui')],
+  plugins: [
+    require('daisyui')({
+      // Only ship what's used (btn modifiers, carousel, modal); daisyUI 5 under
+      // Tailwind 3 otherwise emits every component (~150 KB of CSS).
+      include: ['svg', 'scrollbar', 'properties', 'rootscrolllock', 'rootscrollgutter', 'rootcolor', 'button', 'carousel', 'modal'],
+    }),
+  ],
 }

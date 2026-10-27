@@ -1,5 +1,6 @@
 ---
 import ThemeToggle from './ThemeToggle.astro';
+import ColorModeToggle from './ColorModeToggle.astro';
 import { withBasePath } from '../utils/withBasePath';
 
 const { currentPath = '/' } = Astro.props;
@@ -13,7 +14,7 @@ const navItems = [
 const toBase = (path: string) => withBasePath(path);
 ---
 
-<nav class="bg-gray-900 bg-opacity-80 backdrop-blur-md sticky top-0 z-50">
+<nav class="site-nav bg-gray-900 bg-opacity-80 backdrop-blur-md sticky top-0 z-50">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16">
       <div class="flex items-center w-40 shrink-0">
@@ -36,11 +37,13 @@ const toBase = (path: string) => withBasePath(path);
         </div>
       </div>
 
-      <div class="hidden md:block">
+      <div class="hidden md:flex items-center gap-2">
+        <ColorModeToggle />
         <ThemeToggle />
       </div>
 
       <div class="md:hidden flex items-center gap-2">
+        <ColorModeToggle />
         <ThemeToggle />
         <button id="mobile-menu-toggle" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white" aria-label="Toggle navigation" aria-expanded="false">
           <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -51,7 +54,7 @@ const toBase = (path: string) => withBasePath(path);
     </div>
   </div>
 
-  <div id="mobile-menu" class="md:hidden border-t border-gray-800 bg-gray-900 bg-opacity-95 backdrop-blur-md hidden">
+  <div id="mobile-menu" class="mobile-menu md:hidden border-t border-gray-800 bg-gray-900 bg-opacity-95 backdrop-blur-md hidden">
     <div class="px-4 pt-2 pb-4 space-y-1">
       {navItems.map((item) => (
         <a href={toBase(item.path)} class={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
@@ -65,6 +68,49 @@ const toBase = (path: string) => withBasePath(path);
     </div>
   </div>
 </nav>
+
+<style>
+  :global(html.light) .site-nav {
+    background-color: rgba(233, 234, 239, 0.85);
+    border-bottom: 1px solid rgba(168, 174, 203, 0.6);
+  }
+
+  :global(html.light) .mobile-menu {
+    background-color: rgba(233, 234, 239, 0.97);
+    border-color: rgba(168, 174, 203, 0.6);
+  }
+
+  :global(html.light) .site-nav .text-gray-300,
+  :global(html.light) .site-nav .text-gray-200 {
+    color: #3b4261;
+  }
+
+  :global(html.light) .site-nav .text-gray-400 {
+    color: #646a88;
+  }
+
+  :global(html.light) .site-nav .bg-gray-800 {
+    background-color: rgba(42, 91, 184, 0.1);
+  }
+
+  :global(html.light) .site-nav .hover\:bg-gray-700:hover,
+  :global(html.light) .site-nav .hover\:bg-gray-800:hover {
+    background-color: rgba(52, 59, 88, 0.08);
+  }
+
+  :global(html.light) .site-nav .hover\:text-white:hover {
+    color: #1f2335;
+  }
+
+  :global(html.light) .site-nav :global(.bg-gray-700) {
+    background-color: #d3d6e2;
+    color: #2f3550;
+  }
+
+  :global(html.light) .site-nav :global(.hover\:bg-gray-600:hover) {
+    background-color: #c4c8d8;
+  }
+</style>
 
 <script>
   const toggleMenu = () => {

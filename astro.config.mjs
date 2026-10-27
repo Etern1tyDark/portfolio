@@ -34,11 +34,6 @@ export default defineConfig({
     },
     domains: ['cdn.jsdelivr.net', 'images.unsplash.com', 'raw.githubusercontent.com'],
   },
-  vite: {
-    optimizeDeps: {
-      include: ['gsap'],
-    },
-  },
   site,
   base,
 });

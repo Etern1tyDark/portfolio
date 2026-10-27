@@ -1,10 +1,33 @@
 {
   "experiences": [
     {
+      "period": "May 2026 - Present",
+      "title": "Security Engineer Intern",
+      "company": "Xendit",
+      "description": "Run internal penetration tests across corporate infrastructure, build automated security workflows for internal threat assessments, and triage researcher submissions for the company's private bug bounty program.",
+      "tags": [
+        "Penetration Testing",
+        "Automation",
+        "Bug Bounty"
+      ]
+    },
+    {
+      "period": "Jun 2026 - Aug 2026",
+      "title": "Summer Research Intern",
+      "company": "National University of Singapore",
+      "description": "Co-authored research on fingerprinting autonomous AI agents from encrypted TLS traffic metadata, built a Docker-based cyber range testbed, engineered an ML pipeline (61 features, 85% accuracy) attributing LLM backends by inference timing, and developed challenges for the CS4238 course.",
+      "tags": [
+        "Research",
+        "Network Security",
+        "Machine Learning",
+        "AI Agents"
+      ]
+    },
+    {
       "period": "2023 - Present",
       "title": "Cryptography Stream Lead & Player",
       "company": "Heroes Cyber Security (HCS)",
-      "description": "Lead and compete in the cryptography stream for HCS, one of Indonesia's top-ranked CTF teams.",
+      "description": "Lead the cryptography stream and compete in cryptography and forensics for HCS, ITS's cybersecurity club and currently Indonesia's fifth-best CTF team.",
       "tags": [
         "CTF",
         "Cryptography",
@@ -61,13 +84,14 @@
     },
     {
       "result": "3rd Place",
-      "event": "HOLOGY 8.0 CTF",
-      "date": "Oct 2025",
+      "event": "HOLOGY 8.0 & 9.0 CTF",
+      "date": "Oct 2025 & Sep 2026",
       "awardedBy": "Universitas Brawijaya",
       "scope": "National",
-      "description": "Secured third place in this national CTF as part of Heroes Cyber Security.",
+      "description": "Secured third place in this national CTF in both 2025 and 2026 as part of Heroes Cyber Security.",
       "gallery": [
         "/images/awards/hology.webp",
+        "/images/awards/hology9.webp",
         "/images/awards/hology2.webp"
       ]
     },
@@ -195,20 +219,30 @@
       ]
     },
     {
+      "title": "Q-Sealnet (PQC Signer)",
+      "subtitle": "A post-quantum digital signing system using ML-DSA (44, 65, 87) for binary files, with AES-256-GCM encrypted private-key storage.",
+      "link": "https://github.com/Etern1tyDark/PQC-Signer",
+      "gallery": [
+        "/images/projects/q-sealnet.svg"
+      ]
+    },
+    {
+      "title": "ECC-Signer",
+      "subtitle": "A digital signing system using ECDSA-SECP256k1 for any files, with AES-256-GCM encrypted key storage.",
+      "link": "https://github.com/NathanKhoP/ECC-Signer",
+      "gallery": [
+        "/images/projects/ecc.webp",
+        "/images/projects/ecc2.webp",
+        "/images/projects/ecc3.webp"
+      ]
+    },
+    {
       "title": "Licky Mobile App",
       "subtitle": "An Android-based mobile application that leverages machine learning to analyze tongue images and detect potential health conditions.",
       "link": "https://github.com/KenetHilang/Licky-Mobile-App",
       "gallery": [
         "/images/projects/licky-mobile-app.svg",
         "/images/projects/licky-mobile-app-2.svg"
-      ]
-    },
-    {
-      "title": "Attendance System",
-      "subtitle": "Attendance tracking system built with Next.js in the form of a web dashboard for monitoring and management by students/teachers.",
-      "link": "https://github.com/Etern1tyDark/attendance-system",
-      "gallery": [
-        "/images/projects/attendance.webp"
       ]
     },
     {
@@ -226,16 +260,6 @@
       "link": "https://github.com/Etern1tyDark/eter-kali-wsl/",
       "gallery": [
         "/images/projects/kali.webp"
-      ]
-    },
-    {
-      "title": "ECC-Signer",
-      "subtitle": "A digital signing system using ECDSA-SECP256k1 for any files.",
-      "link": "https://github.com/NathanKhoP/ECC-Signer",
-      "gallery": [
-        "/images/projects/ecc.webp",
-        "/images/projects/ecc2.webp",
-        "/images/projects/ecc3.webp"
       ]
     }
   ],

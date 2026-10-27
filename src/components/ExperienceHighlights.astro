@@ -22,6 +22,9 @@ interface Props {
 }
 const { awards, otherAwards } = Astro.props;
 const isSvg = (path: string) => path.toLowerCase().endsWith('.svg');
+// Cards render ~280-360px wide; the lightbox picks the largest srcset entry.
+const thumbWidths = [360, 720, 1600];
+const thumbSizes = '(max-width: 640px) calc(100vw - 5rem), 360px';
 ---
 
 <div class="stack-gap">
@@ -40,7 +43,7 @@ const isSvg = (path: string) => path.toLowerCase().endsWith('.svg');
                   {isSvg(image) ? (
                     <Image class="award-photo lightbox-trigger" src={imageSrc} alt={imageAlt} loading="lazy" decoding="async" />
                   ) : (
-                    <Image class="award-photo lightbox-trigger" src={imageSrc} alt={imageAlt} loading="lazy" decoding="async" format="webp" quality={80} />
+                    <Image class="award-photo lightbox-trigger" src={imageSrc} alt={imageAlt} loading="lazy" decoding="async" format="webp" quality={80} widths={thumbWidths} sizes={thumbSizes} />
                   )}
                 </div>
               );
@@ -185,12 +188,21 @@ const isSvg = (path: string) => path.toLowerCase().endsWith('.svg');
       return modal.hasAttribute('open');
     };
 
+    const largestSrc = (img) => {
+      const candidates = (img.srcset || '')
+        .split(',')
+        .map((entry) => entry.trim().split(/\s+/))
+        .filter(([url, size]) => url && size?.endsWith('w'))
+        .sort((a, b) => parseInt(b[1]) - parseInt(a[1]));
+      return candidates[0]?.[0] || img.currentSrc || img.src;
+    };
+
     const updateModal = () => {
       if (!modalImage || !activeSlides.length) return;
       const current = activeSlides[activeIndex]?.querySelector('img');
       if (!current) return;
 
-      const src = current.currentSrc || current.src;
+      const src = largestSrc(current);
       if (!src) return;
 
       modalImage.src = src;

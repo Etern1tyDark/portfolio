@@ -61,13 +61,33 @@ const ldItems = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
 <!doctype html>
 <html lang="en">
   <head>
-    <ClientRouter />
     <meta charset="UTF-8" />
+    <script is:inline>
+      // Runs before first paint. ClientRouter replaces <html> attributes on every
+      // navigation (and won't re-run this script), so re-apply after each swap.
+      (() => {
+        const applyTheme = () => {
+          let stored = null;
+          try { stored = localStorage.getItem('theme'); } catch {}
+          const light = stored ? stored === 'light' : window.matchMedia('(prefers-color-scheme: light)').matches;
+          const root = document.documentElement;
+          root.classList.toggle('light', light);
+          root.classList.toggle('dark', !light);
+          root.setAttribute('data-theme', light ? 'light' : 'dark');
+        };
+        applyTheme();
+        document.addEventListener('astro:after-swap', applyTheme);
+        window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', applyTheme);
+        window.addEventListener('theme-change', applyTheme);
+      })();
+    </script>
+    <ClientRouter />
     <meta name="description" content={description} />
     <meta name="robots" content={robots} />
-    <meta name="viewport" content="width=device-width" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="canonical" href={canonicalUrl.href} />
-    <link rel="icon" type="image/svg+xml" href={withBasePath('/favicon.svg')} />
+    <link rel="icon" type="image/png" sizes="64x64" href={withBasePath('/favicon.png')} />
+    <link rel="apple-touch-icon" href={withBasePath('/apple-touch-icon.png')} />
     <meta name="generator" content={Astro.generator} />
 
     <meta property="og:type" content={ogType} />
@@ -88,245 +108,155 @@ const ldItems = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
     {ogType === 'article' && articleAuthor && <meta property="article:author" content={articleAuthor} />}
 
     <title>{title}</title>
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400..700&family=Inter:wght@400..700&display=swap" />
     {ldItems.map((item) => (
       <script type="application/ld+json" set:html={JSON.stringify(item)} />
     ))}
   </head>
   <body class="min-h-screen transition-colors duration-300 relative overflow-x-hidden">
-    <div id="smooth-wrapper">
-      {!disableNoise && <NoiseBackground />}
-      {!disableRubber && <RubberBackground />}
-      <div id="smooth-content">
-        <slot />
-        <Footer />
-      </div>
-    </div>
+    {!disableNoise && <NoiseBackground />}
+    {!disableRubber && <RubberBackground />}
+    <slot />
+    <Footer />
 
-    <script is:inline>
-      if (localStorage.getItem('theme') === 'light' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: light)').matches)) {
-        document.documentElement.classList.add('light');
-        document.documentElement.setAttribute('data-theme', 'tokyo-light');
-      } else {
-        document.documentElement.classList.add('dark');
-        document.documentElement.setAttribute('data-theme', 'tokyo-dark');
-      }
-    </script>
   </body>
 </html>
 
 <script>
-  await document.fonts.ready;
-  import gsap from "gsap";
+  import Lenis from "lenis";
+  import "lenis/dist/lenis.css";
 
-  const loadModule = async (local: string, cdn: string) => {
-    try {
-      return await import(/* @vite-ignore */ local);
-    } catch (err) {
-      console.warn(`${local} failed to load locally, retrying CDN`, err);
-      try {
-        return await import(/* @vite-ignore */ cdn);
-      } catch (err2) {
-        console.warn(`${local} failed to load from CDN`, err2);
-        return null;
-      }
-    }
+  // Lightweight entrance/scroll reveals (IntersectionObserver + Web Animations).
+  const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const EASE_OUT = "cubic-bezier(0.33, 1, 0.68, 1)";
+  const TRIGGER_RATIO = 0.82;
+
+  const STAGGER_MS = 80;
+  const MAX_STAGGER_STEPS = 6;
+
+  let observer: IntersectionObserver | null = null;
+  // Elements waiting to scroll into view, with their rise distance.
+  const pending = new Map<Element, number>();
+
+  if (localStorage.getItem("effects") === "off") {
+    document.body.classList.add("no-effects");
+  }
+
+  const fadeIn = (el: Element, y: number, duration: number, delay = 0) => {
+    (el as HTMLElement).style.opacity = "";
+    el.animate(
+      [
+        { opacity: 0, transform: `translateY(${y}px)` },
+        { opacity: 1, transform: "none" },
+      ],
+      { duration, delay, easing: EASE_OUT, fill: "backwards" },
+    );
   };
 
-  let ScrollTriggerMod: typeof import("gsap/ScrollTrigger") | null = null;
-  let ScrollSmootherMod: typeof import("gsap/ScrollSmoother") | null = null;
-  let SplitTextMod: typeof import("gsap/SplitText") | null = null;
+  const byDocumentOrder = (a: Element, b: Element) =>
+    a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
 
-  ScrollTriggerMod = await loadModule(
-    "gsap/ScrollTrigger",
-    "https://cdn.jsdelivr.net/npm/gsap@3.14.1/dist/ScrollTrigger.min.js",
-  );
-  if (ScrollTriggerMod?.ScrollTrigger) {
-    gsap.registerPlugin(ScrollTriggerMod.ScrollTrigger);
-  }
-
-  ScrollSmootherMod = await loadModule(
-    "gsap/ScrollSmoother",
-    "https://cdn.jsdelivr.net/npm/gsap@3.14.1/dist/ScrollSmoother.min.js",
-  );
-  if (ScrollSmootherMod?.ScrollSmoother) {
-    gsap.registerPlugin(ScrollSmootherMod.ScrollSmoother);
-  }
-
-  SplitTextMod = await loadModule(
-    "gsap/SplitText",
-    "https://cdn.jsdelivr.net/npm/gsap@3.14.1/dist/SplitText.min.js",
-  );
-  if (SplitTextMod?.SplitText) {
-    gsap.registerPlugin(SplitTextMod.SplitText);
-  }
-
-  const hasScrollTrigger = Boolean(ScrollTriggerMod?.ScrollTrigger);
-  const hasSmoother = Boolean(ScrollSmootherMod?.ScrollSmoother);
-  const hasSplit = Boolean(SplitTextMod?.SplitText);
-
-  let ctx: gsap.Context | null = null;
-  const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const effectsPref = localStorage.getItem('effects');
-  if (effectsPref === 'off') {
-    document.body.classList.add('no-effects');
-  }
-
-  const revealWithTrigger = (target: gsap.TweenTarget, opts: { y?: number; stagger?: number; trigger?: Element }) => {
-    const yVal = opts.y ?? 24;
-    gsap.from(target, {
-      opacity: 0,
-      y: yVal,
-      duration: 0.85,
-      ease: "power2.out",
-      stagger: opts.stagger,
-      scrollTrigger: hasScrollTrigger && opts.trigger ? {
-        trigger: opts.trigger,
-        start: "top 82%",
-      } : undefined,
-      onComplete: () => { gsap.set(target, { clearProps: "opacity,transform" }); },
+  // Reveal a batch of elements that became visible together, staggered top-to-bottom.
+  const revealBatch = (els: Element[]) => {
+    els.sort(byDocumentOrder).forEach((el, i) => {
+      fadeIn(el, pending.get(el) ?? 18, 850, Math.min(i, MAX_STAGGER_STEPS) * STAGGER_MS);
+      pending.delete(el);
+      observer?.unobserve(el);
     });
   };
 
   const teardown = () => {
-    ctx?.revert();
-    ctx = null;
-    const triggers = ScrollTriggerMod?.ScrollTrigger.getAll() || [];
-    triggers.forEach((t) => t.kill(true));
-    ScrollSmootherMod?.ScrollSmoother.get()?.kill();
-    ScrollTriggerMod?.ScrollTrigger.clearScrollMemory?.();
+    observer?.disconnect();
+    observer = null;
+    // Make sure nothing stays hidden if reveals are cancelled mid-page.
+    pending.forEach((_, el) => ((el as HTMLElement).style.opacity = ""));
+    pending.clear();
   };
 
   const buildAnimations = () => {
-    const effectsOff = document.body.classList.contains('no-effects');
-    const skipFx = effectsOff || reduceMotionQuery.matches;
     teardown();
+    if (localStorage.getItem("effects") === "off" || reduceMotionQuery.matches) return;
 
-    if (skipFx) {
-      return;
+    observer = new IntersectionObserver(
+      (entries) => revealBatch(entries.filter((e) => e.isIntersecting).map((e) => e.target)),
+      { rootMargin: `0px 0px -${Math.round((1 - TRIGGER_RATIO) * 100)}% 0px` },
+    );
+
+    const heroTitle = document.querySelector(".hero-title");
+    if (heroTitle) fadeIn(heroTitle, -14, 900);
+    const heroSubtitle = document.querySelector(".hero-subtitle");
+    if (heroSubtitle) fadeIn(heroSubtitle, -10, 900, 150);
+    document.querySelectorAll(".hero-cta a").forEach((cta, i) => fadeIn(cta, 12, 800, 350 + i * 80));
+
+    // Every card / block reveals individually as it enters the viewport.
+    const targets: [Element, number][] = [
+      ...Array.from(document.querySelectorAll(".reveal-up"), (el) => [el, 26] as [Element, number]),
+      ...Array.from(document.querySelectorAll("[data-stagger-group] [data-stagger-item]"), (el) => [el, 18] as [Element, number]),
+    ];
+    const visibleNow: Element[] = [];
+    for (const [el, y] of targets) {
+      pending.set(el, y);
+      if (el.getBoundingClientRect().top < window.innerHeight * TRIGGER_RATIO) {
+        visibleNow.push(el);
+      } else {
+        (el as HTMLElement).style.opacity = "0";
+        observer.observe(el);
+      }
     }
+    revealBatch(visibleNow);
+  };
 
-    ctx = gsap.context(() => {
-      if (hasSmoother && ScrollSmootherMod) {
-        ScrollSmootherMod.ScrollSmoother.get()?.kill();
-        const existingSmoother = ScrollSmootherMod.ScrollSmoother.get();
-        if (existingSmoother) {
-          existingSmoother.content("#smooth-content");
-          existingSmoother.wrapper("#smooth-wrapper");
-          existingSmoother.smooth(0.7);
-          existingSmoother.refresh();
-        } else {
-          ScrollSmootherMod.ScrollSmoother.create({
-            smooth: 0.7,
-            effects: true,
-            normalizeScroll: true,
-            content: "#smooth-content",
-            wrapper: "#smooth-wrapper",
-          });
-        }
-      }
+  // Smooth wheel scrolling. Lenis eases the real window scroll (no transformed
+  // wrapper), so sticky elements, IntersectionObserver and Astro's scroll
+  // restoration keep working. Touch scrolling stays native.
+  let lenis: Lenis | null = null;
 
-      const heroTitleEl = document.querySelector(".hero-title");
-      if (heroTitleEl) {
-        if (hasSplit && SplitTextMod) {
-          const split = new SplitTextMod.SplitText(heroTitleEl, { type: "chars" });
-          gsap.from(split.chars, {
-            duration: 1,
-            opacity: 0,
-            y: -16,
-            ease: "power2.out",
-            stagger: 0.05,
-            onComplete: () => { gsap.set(split.chars, { clearProps: "opacity,transform" }); },
-          });
-        } else {
-          gsap.from(heroTitleEl, {
-            duration: 0.9,
-            opacity: 0,
-            y: -14,
-            ease: "power2.out",
-            onComplete: () => { gsap.set(heroTitleEl, { clearProps: "opacity,transform" }); },
-          });
-        }
-      }
+  const destroySmoothScroll = () => {
+    lenis?.destroy();
+    lenis = null;
+  };
 
-      const heroSubtitleEl = document.querySelector(".hero-subtitle");
-      if (heroSubtitleEl) {
-        if (hasSplit && SplitTextMod) {
-          const split = new SplitTextMod.SplitText(heroSubtitleEl, { type: "words" });
-          gsap.from(split.words, {
-            duration: 1,
-            opacity: 0,
-            y: -12,
-            ease: "power2.out",
-            delay: 0.2,
-            stagger: 0.06,
-            onComplete: () => { gsap.set(split.words, { clearProps: "opacity,transform" }); },
-          });
-        } else {
-          gsap.from(heroSubtitleEl, {
-            duration: 0.9,
-            opacity: 0,
-            y: -10,
-            ease: "power2.out",
-            delay: 0.15,
-            onComplete: () => { gsap.set(heroSubtitleEl, { clearProps: "opacity,transform" }); },
-          });
-        }
-      }
-
-      const heroCTAs = document.querySelectorAll(".hero-cta a");
-      if (heroCTAs.length) {
-        gsap.set(heroCTAs, { opacity: 1, y: 0 });
-        gsap.from(heroCTAs, {
-          duration: 0.8,
-          opacity: 0,
-          y: 12,
-          ease: "power2.out",
-          delay: 0.35,
-          stagger: 0.08,
-          onComplete: () => { gsap.set(heroCTAs, { clearProps: "opacity,transform" }); },
-        });
-      }
-
-      const revealBlocks = gsap.utils.toArray<HTMLElement>(".reveal-up");
-      revealBlocks.forEach((block) => revealWithTrigger(block, { y: 26, trigger: block }));
-
-      const staggerGroups = gsap.utils.toArray<HTMLElement>("[data-stagger-group]");
-      staggerGroups.forEach((group) => {
-        const items = Array.from(group.querySelectorAll<HTMLElement>("[data-stagger-item]"));
-        if (!items.length) return;
-        revealWithTrigger(items, { y: 18, stagger: 0.08, trigger: group });
+  const syncSmoothScroll = () => {
+    const enabled = localStorage.getItem("effects") !== "off" && !reduceMotionQuery.matches;
+    if (!enabled) {
+      destroySmoothScroll();
+    } else if (!lenis) {
+      lenis = new Lenis({
+        autoRaf: true,
+        lerp: 0.1,
+        // Let horizontally scrollable carousels / code blocks scroll natively.
+        allowNestedScroll: true,
+        // Don't scroll the page behind an open lightbox.
+        prevent: (node) => !!node.closest?.("dialog"),
       });
-    });
-
-    if (hasScrollTrigger) {
-      ScrollTriggerMod?.ScrollTrigger.refresh();
     }
   };
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", buildAnimations, { once: true });
-  } else {
+  syncSmoothScroll();
+  // Stop easing before the router swaps pages; the swap also wipes the classes
+  // Lenis put on <html>. Start fresh on page-load, after the router has
+  // scrolled the new page, so Lenis doesn't treat that jump as a scroll.
+  document.addEventListener("astro:before-swap", destroySmoothScroll);
+  document.addEventListener("astro:page-load", syncSmoothScroll);
+  reduceMotionQuery.addEventListener("change", syncSmoothScroll);
+  window.addEventListener("effects-toggle", syncSmoothScroll);
+
+  // Initial astro:page-load waits for window "load" (images), so run immediately on
+  // first load and only rebuild on page-load after a client-side navigation.
+  let swapped = false;
+  buildAnimations();
+  document.addEventListener("astro:after-swap", () => (swapped = true));
+  document.addEventListener("astro:page-load", () => {
+    if (!swapped) return;
+    swapped = false;
     buildAnimations();
-  }
-
-  document.addEventListener("astro:page-load", buildAnimations);
-  document.addEventListener("astro:after-swap", () => requestAnimationFrame(buildAnimations));
-  document.addEventListener("astro:before-swap", () => {
-    teardown();
   });
+  document.addEventListener("astro:before-swap", teardown);
   reduceMotionQuery.addEventListener("change", buildAnimations);
-  const scheduleBuild = () => {
-    requestAnimationFrame(() => setTimeout(buildAnimations, 0));
-  };
-
-  window.addEventListener("effects-toggle", (e) => {
-    scheduleBuild();
-  });
-
+  window.addEventListener("effects-toggle", buildAnimations);
   window.addEventListener("storage", (e) => {
-    if (e.key === 'effects') scheduleBuild();
+    if (e.key === "effects") buildAnimations();
   });
 </script>

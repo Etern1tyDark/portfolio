@@ -1,22 +1,52 @@
-<canvas id="noisy" class="fixed inset-0 pointer-events-none opacity-65 mix-blend-soft-light z-20"></canvas>
+<div id="noisy" class="fixed pointer-events-none opacity-65 mix-blend-soft-light z-20" aria-hidden="true" transition:persist></div>
 
 <style>
+  /* A small noise tile is generated once; flicker comes from jumping the layer
+     around with a transform-only animation, which runs on the compositor
+     instead of regenerating a full-screen image on the CPU every frame. */
+  #noisy {
+    inset: -128px;
+    background-repeat: repeat;
+    background-size: 256px 256px;
+    animation: noise-shift 0.4s steps(1) infinite;
+    will-change: transform;
+  }
+
+  @keyframes noise-shift {
+    0% { transform: translate(0, 0); }
+    10% { transform: translate(-61px, 37px); }
+    20% { transform: translate(43px, -89px); }
+    30% { transform: translate(-97px, -23px); }
+    40% { transform: translate(71px, 53px); }
+    50% { transform: translate(-29px, 101px); }
+    60% { transform: translate(113px, -47px); }
+    70% { transform: translate(-79px, -107px); }
+    80% { transform: translate(17px, 79px); }
+    90% { transform: translate(97px, 11px); }
+  }
+
   body.no-effects #noisy {
     display: none !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #noisy {
+      animation: none;
+    }
   }
 </style>
 
 <script>
-  function resize(canvas: HTMLCanvasElement) {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
+  const TILE = 256;
+  let tileUrl = "";
 
-  function buildNoise(
-    canvas: HTMLCanvasElement,
-    ctx: CanvasRenderingContext2D
-  ) {
-    const imageData = ctx.createImageData(canvas.width, canvas.height);
+  const buildTile = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = TILE;
+    canvas.height = TILE;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return "";
+    const imageData = ctx.createImageData(TILE, TILE);
     const data = imageData.data;
     for (let i = 0; i < data.length; i += 4) {
       const value = Math.random() * 255;
@@ -26,22 +56,17 @@
       data[i + 3] = 48; // a — stronger grain
     }
     ctx.putImageData(imageData, 0, 0);
-  }
+    return canvas.toDataURL("image/png");
+  };
 
-  function animate(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
-    buildNoise(canvas, ctx);
-    requestAnimationFrame(() => animate(canvas, ctx));
-  }
+  const apply = () => {
+    const noisy = document.getElementById("noisy");
+    if (!noisy || noisy.style.backgroundImage) return;
+    tileUrl ||= buildTile();
+    if (tileUrl) noisy.style.backgroundImage = `url(${tileUrl})`;
+  };
 
-  function init() {
-    const noisy = document.getElementById("noisy") as HTMLCanvasElement;
-    if (!noisy) return;
-    const ctx = noisy.getContext("2d")!;
-    if (!ctx) return;
-    resize(noisy);
-    window.addEventListener("resize", () => resize(noisy));
-    animate(noisy, ctx);
-  }
-
-  init();
+  apply();
+  // Pages without the layer (e.g. blog posts) drop it; re-apply when it comes back.
+  document.addEventListener("astro:after-swap", apply);
 </script>

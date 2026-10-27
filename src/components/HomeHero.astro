@@ -37,7 +37,7 @@ const rhythmInputKey = "F";
       </div>
       <p id="rhythm-judgement" class="hero-rhythm-judge" aria-live="polite"></p>
       <p class="text-base md:text-lg text-gray-200 hero-subtitle max-w-xl mx-auto leading-relaxed">
-        I'm Nathan, a third-year Information Technology student focused on cybersecurity, with active work in cryptography, forensics, red teaming, and software development.
+        I'm Nathan, a final-year Information Technology student focused on cybersecurity, with active work in cryptography, forensics, red teaming, and software development.
       </p>
       <div class="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center mt-8 hero-cta px-4 sm:px-0">
         <a href={withBasePath('/blog')} class="btn btn-primary px-8 py-3 text-lg sm:text-xl rounded-xl w-full sm:w-auto">View Blogs</a>
@@ -60,7 +60,8 @@ const rhythmInputKey = "F";
     const SPAWN_INTERVAL_MS = 1850;
     const NOTE_GAP_PX = 120;
 
-    let cleanup = null;
+    // Keep the active lane's cleanup on window so a lane is never mounted twice.
+    const CLEANUP_KEY = "__rhythmLaneCleanup";
 
     const isEditableTarget = (target) =>
       target instanceof HTMLElement &&
@@ -328,9 +329,12 @@ const rhythmInputKey = "F";
         }
       };
 
+      let disposed = false;
       const fontsReady = "fonts" in document ? document.fonts.ready : Promise.resolve();
       fontsReady.then(() => {
-        handleActivityChange();
+        // Without this check a lane torn down before fonts load would restart
+        // and run alongside its replacement (two note streams).
+        if (!disposed) handleActivityChange();
       });
 
       window.addEventListener("resize", recalcMetrics);
@@ -350,6 +354,7 @@ const rhythmInputKey = "F";
       }
 
       return () => {
+        disposed = true;
         window.removeEventListener("resize", recalcMetrics);
         window.removeEventListener("keydown", onKeyDown);
         document.removeEventListener("visibilitychange", handleActivityChange);
@@ -365,21 +370,22 @@ const rhythmInputKey = "F";
       };
     };
 
-    const mount = () => {
-      if (cleanup) cleanup();
-      cleanup = initRhythmLane();
+    const unmount = () => {
+      window[CLEANUP_KEY]?.();
+      window[CLEANUP_KEY] = null;
     };
 
-    const unmount = () => {
-      if (cleanup) {
-        cleanup();
-        cleanup = null;
-      }
+    const mount = () => {
+      unmount();
+      window[CLEANUP_KEY] = initRhythmLane();
     };
 
     mount();
-    document.addEventListener("astro:page-load", mount);
-    document.addEventListener("astro:before-swap", unmount);
+    if (!window.__rhythmLaneBound) {
+      window.__rhythmLaneBound = true;
+      document.addEventListener("astro:page-load", mount);
+      document.addEventListener("astro:before-swap", unmount);
+    }
   })();
 </script>
 
@@ -716,6 +722,74 @@ const rhythmInputKey = "F";
   .hero-rhythm-tap-btn:active {
     transform: scale(0.95);
     background: rgba(122, 162, 247, 0.3);
+  }
+
+  /* Light theme */
+  :global(html.light) .hero-tones {
+    background: radial-gradient(circle at 20% 20%, rgba(46, 125, 233, 0.16), transparent 35%),
+      radial-gradient(circle at 80% 10%, rgba(152, 84, 241, 0.13), transparent 35%),
+      radial-gradient(circle at 50% 85%, rgba(0, 113, 151, 0.09), transparent 38%),
+      var(--tokyo-surface);
+  }
+
+  :global(html.light) .hero-aurora {
+    opacity: 0.45;
+  }
+
+  :global(html.light) .hero-rings {
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, transparent 55%);
+  }
+
+  :global(html.light) .rhythm-lane {
+    border-color: rgba(42, 91, 184, 0.25);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(236, 238, 245, 0.75));
+    box-shadow: inset 0 0 40px rgba(42, 91, 184, 0.06), 0 20px 45px rgba(52, 59, 88, 0.12);
+  }
+
+  :global(html.light) .judgement-line {
+    background: linear-gradient(to bottom, rgba(0, 106, 142, 0), rgba(0, 106, 142, 0.9), rgba(0, 106, 142, 0));
+    box-shadow: 0 0 16px rgba(0, 106, 142, 0.45);
+  }
+
+  :global(html.light) .judgement-tag {
+    color: rgba(59, 66, 97, 0.75);
+  }
+
+  :global(html.light .char-glyph) {
+    color: #2a5bb8;
+    text-shadow: 0 0 18px rgba(42, 91, 184, 0.25);
+  }
+
+  :global(html.light .tap-note) {
+    border-color: rgba(0, 106, 142, 0.9);
+    background: radial-gradient(circle at 35% 35%, #fff, rgba(42, 91, 184, 0.85));
+    box-shadow: 0 0 10px rgba(0, 106, 142, 0.5);
+  }
+
+  :global(html.light) .hero-rhythm-hint {
+    color: rgba(59, 66, 97, 0.85);
+  }
+
+  :global(html.light) .hero-rhythm-hint kbd {
+    border-color: rgba(42, 91, 184, 0.5);
+    background: rgba(255, 255, 255, 0.8);
+    color: #2a5bb8;
+  }
+
+  :global(html.light) .hero-rhythm-judge.perfect {
+    color: #1d7a4f;
+    text-shadow: none;
+  }
+
+  :global(html.light) .hero-rhythm-judge.good {
+    color: #1d63a8;
+    text-shadow: none;
+  }
+
+  :global(html.light) .hero-rhythm-tap-btn {
+    background: rgba(42, 91, 184, 0.1);
+    border-color: rgba(42, 91, 184, 0.4);
+    color: #2a5bb8;
   }
 
   @media (max-width: 768px) {

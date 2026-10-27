@@ -149,6 +149,17 @@ const jsonLd = {
     overflow-x: auto;
   }
 
+  :global(html.light .prose h2) {
+    border-bottom-color: rgba(168, 174, 203, 0.7);
+  }
+
+  :global(html.light .prose :not(pre) > code) {
+    background: rgba(42, 91, 184, 0.08);
+    color: #2a4a8f;
+    border-color: rgba(42, 91, 184, 0.28);
+  }
+
+  /* Code blocks keep the dark Tokyo Night theme in both modes. */
   :global(.prose pre code) {
     color: #d7e3ff;
     background: transparent;

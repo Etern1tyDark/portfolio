@@ -19,10 +19,6 @@
     --tokyo-panel-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
   }
 
-  html {
-    scroll-behavior: smooth;
-  }
-
   body {
     background: radial-gradient(circle at 20% 20%, rgba(122, 162, 247, 0.08), transparent 35%),
       radial-gradient(circle at 80% 10%, rgba(187, 154, 247, 0.08), transparent 35%),
@@ -116,13 +112,6 @@
     background: linear-gradient(140deg, rgba(36, 40, 59, 0.96), rgba(20, 24, 37, 0.94));
     transition: all 0.3s ease;
     color: var(--tokyo-contrast);
-  }
-
-  html.light .card {
-    background: linear-gradient(140deg, #f7f8fc, #eef1f9);
-    border: 1px solid #d7deeb;
-    color: #1f2335;
-    box-shadow: 0 12px 30px rgba(17, 24, 39, 0.12);
   }
 
   .card:hover {
@@ -426,3 +415,97 @@ html.light #theme-toggle:hover {
     transform: none !important;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Light theme (Tokyo Night Day). Components are authored dark-first;  */
+/* tokens are swapped here and Tailwind color utilities are remapped.  */
+/* Component-scoped surfaces have their own html.light rules.          */
+/* ------------------------------------------------------------------ */
+html.light {
+  color-scheme: light;
+  --tokyo-bg: #e1e2e7;
+  --tokyo-surface: #d6d9e4;
+  --tokyo-surface-2: #f3f4f8;
+  --tokyo-border: #a8aecb;
+  --tokyo-muted: #4c5374;
+  --tokyo-contrast: #2f3550;
+  --tokyo-blue: #2a5bb8;
+  --tokyo-cyan: #006a8e;
+  --tokyo-magenta: #7847bd;
+  --tokyo-green: #48682a;
+  --tokyo-yellow: #8c6c3e;
+  --tokyo-red: #c4204f;
+  --tokyo-panel-shadow: 0 12px 30px rgba(52, 59, 88, 0.12);
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.light body {
+  background: radial-gradient(circle at 20% 20%, rgba(46, 125, 233, 0.08), transparent 35%),
+    radial-gradient(circle at 80% 10%, rgba(152, 84, 241, 0.07), transparent 35%),
+    radial-gradient(circle at 50% 90%, rgba(0, 113, 151, 0.05), transparent 40%),
+    var(--tokyo-bg);
+}
+
+html.light body.no-effects {
+  background: #e4e5ea;
+}
+
+html.light .hero-tones {
+  background: radial-gradient(circle at 20% 20%, rgba(46, 125, 233, 0.14), transparent 35%),
+    radial-gradient(circle at 80% 10%, rgba(152, 84, 241, 0.12), transparent 35%),
+    radial-gradient(circle at 50% 85%, rgba(0, 113, 151, 0.08), transparent 40%),
+    var(--tokyo-surface);
+  border-bottom-color: rgba(168, 174, 203, 0.8);
+}
+
+html.light .card {
+  background: linear-gradient(140deg, #f7f8fb, #eceef5);
+  border: 1px solid #c6cbdc;
+  color: var(--tokyo-contrast);
+  box-shadow: 0 12px 30px rgba(52, 59, 88, 0.1);
+}
+
+html.light .card:hover {
+  border-color: rgba(42, 91, 184, 0.45);
+  box-shadow: 0 22px 44px rgba(52, 59, 88, 0.16);
+}
+
+html.light .btn-outline {
+  border-color: var(--tokyo-blue);
+  color: var(--tokyo-blue);
+  background-color: rgba(42, 91, 184, 0.06);
+}
+
+html.light .btn-outline:hover {
+  background-color: var(--tokyo-blue);
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(42, 91, 184, 0.25);
+}
+
+html.light .btn-primary {
+  box-shadow: 0 10px 26px rgba(42, 91, 184, 0.22);
+}
+
+/* Shared section labels used across About components */
+html.light .eyebrow,
+html.light .section-sub {
+  color: #5a607d;
+}
+
+/* Tailwind color utilities authored for the dark palette */
+html.light .text-blue-400 { color: var(--tokyo-blue); }
+html.light .text-cyan-300 { color: var(--tokyo-cyan); }
+html.light .text-green-400 { color: var(--tokyo-green); }
+html.light .text-purple-300,
+html.light .text-purple-400,
+html.light .hover\:text-purple-400:hover,
+html.light .group:hover .group-hover\:text-purple-400 { color: var(--tokyo-magenta); }
+html.light .hover\:text-blue-400:hover { color: var(--tokyo-blue); }
+html.light .text-gray-200 { color: #282d45; }
+html.light .text-gray-300 { color: #3b4261; }
+html.light .text-gray-400 { color: #565c7a; }
+html.light .text-gray-500 { color: #646a88; }
+html.light .border-gray-500 { border-color: #a3a9c4; }
