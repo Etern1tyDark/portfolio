@@ -1,0 +1,262 @@
+---
+import { withBasePath } from '../utils/withBasePath';
+import music from '../data/music.json';
+
+const track = { ...music, src: withBasePath(music.src) };
+---
+
+<div class="music-player" data-music-player data-volume={track.volume} transition:persist="music-player">
+  <audio src={track.src} preload="none" loop></audio>
+  <button
+    type="button"
+    class="music-toggle"
+    data-music-toggle
+    aria-pressed="false"
+    aria-label={`Play ${track.title} by ${track.artist}`}
+    title="Play music"
+  >
+    <svg class="icon-off" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="m22 9-6 6M16 9l6 6"/></svg>
+    <svg class="icon-on" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+  </button>
+  <span class="music-eq" aria-hidden="true"><i></i><i></i><i></i></span>
+  <span class="music-label">
+    <span class="music-status" data-music-status>Paused</span>
+    <span class="music-track">{track.title} — {track.artist}</span>
+  </span>
+</div>
+
+<style>
+  .music-player {
+    position: fixed;
+    right: calc(1rem + env(safe-area-inset-right, 0px));
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.35rem 0.85rem 0.35rem 0.35rem;
+    border-radius: 999px;
+    border: 1px solid rgba(122, 162, 247, 0.3);
+    background: rgba(26, 27, 38, 0.82);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(10px);
+    font-family: "Fira Code", monospace;
+    color: #c0caf5;
+    max-width: calc(100vw - 2rem);
+  }
+
+  .music-player.is-unavailable {
+    display: none;
+  }
+
+  .music-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    background: rgba(122, 162, 247, 0.16);
+    color: #7dcfff;
+    transition: background-color 150ms ease, transform 150ms ease;
+  }
+
+  .music-toggle:hover {
+    background: rgba(122, 162, 247, 0.28);
+  }
+
+  .music-toggle:active {
+    transform: scale(0.94);
+  }
+
+  .music-toggle:focus-visible {
+    outline: 2px solid #7aa2f7;
+    outline-offset: 2px;
+  }
+
+  .icon-on,
+  .music-player.is-playing .icon-off {
+    display: none;
+  }
+
+  .music-player.is-playing .icon-on {
+    display: block;
+  }
+
+  .music-eq {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 0.8rem;
+  }
+
+  .music-eq i {
+    width: 3px;
+    height: 30%;
+    border-radius: 1px;
+    background: #7aa2f7;
+    transform-origin: bottom;
+  }
+
+  .music-player.is-playing .music-eq i {
+    height: 100%;
+    animation: music-eq 900ms ease-in-out infinite;
+  }
+
+  .music-player.is-playing .music-eq i:nth-child(2) {
+    animation-delay: -300ms;
+  }
+
+  .music-player.is-playing .music-eq i:nth-child(3) {
+    animation-delay: -600ms;
+  }
+
+  .music-label {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.15;
+  }
+
+  .music-status {
+    font-size: 0.6rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(169, 177, 214, 0.75);
+  }
+
+  .music-track {
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @keyframes music-eq {
+    0%,
+    100% {
+      transform: scaleY(0.3);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .music-player.is-playing .music-eq i {
+      animation: none;
+      transform: scaleY(0.7);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .music-player {
+      padding-right: 0.35rem;
+    }
+
+    .music-label {
+      display: none;
+    }
+  }
+
+  :global(html.light) .music-player {
+    border-color: rgba(42, 91, 184, 0.25);
+    background: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 10px 30px rgba(52, 59, 88, 0.15);
+    color: #2f3550;
+  }
+
+  :global(html.light) .music-toggle {
+    background: rgba(42, 91, 184, 0.1);
+    color: #2a5bb8;
+  }
+
+  :global(html.light) .music-toggle:hover {
+    background: rgba(42, 91, 184, 0.18);
+  }
+
+  :global(html.light) .music-eq i {
+    background: #2a5bb8;
+  }
+
+  :global(html.light) .music-status {
+    color: rgba(59, 66, 97, 0.7);
+  }
+</style>
+
+<script>
+  // The player is persisted across client-side navigations, so the track keeps
+  // playing between pages and this script only needs to wire it up once.
+  const STORAGE_KEY = "music";
+
+  const player = document.querySelector<HTMLElement>("[data-music-player]");
+  const audio = player?.querySelector("audio");
+  const toggle = player?.querySelector<HTMLButtonElement>("[data-music-toggle]");
+  const status = player?.querySelector<HTMLElement>("[data-music-status]");
+
+  if (player && audio && toggle && status) {
+    audio.volume = Number(player.dataset.volume) || 0.2;
+
+    const readPreference = () => {
+      try {
+        return localStorage.getItem(STORAGE_KEY);
+      } catch {
+        return null;
+      }
+    };
+
+    const remember = (value: "on" | "off") => {
+      try {
+        localStorage.setItem(STORAGE_KEY, value);
+      } catch {}
+    };
+
+    const render = () => {
+      const playing = !audio.paused;
+      player.classList.toggle("is-playing", playing);
+      toggle.setAttribute("aria-pressed", String(playing));
+      toggle.title = playing ? "Mute music" : "Play music";
+      status.textContent = playing ? "Now playing" : "Paused";
+    };
+
+    const play = () => audio.play().then(render);
+
+    // Browsers usually block audible autoplay until the visitor interacts with
+    // the page, so fall back to starting on their first click / key / tap.
+    const ACTIVATION_EVENTS = ["pointerdown", "keydown", "touchend"];
+    const cancelResume = () => {
+      ACTIVATION_EVENTS.forEach((type) => window.removeEventListener(type, resume, true));
+    };
+    const resume = (event: Event) => {
+      if ((event.target as Element | null)?.closest?.("[data-music-toggle]")) return;
+      cancelResume();
+      if (readPreference() !== "off" && audio.paused) play().catch(() => {});
+    };
+
+    toggle.addEventListener("click", () => {
+      cancelResume();
+      if (audio.paused) {
+        remember("on");
+        play().catch(() => {});
+      } else {
+        remember("off");
+        audio.pause();
+      }
+    });
+
+    audio.addEventListener("play", render);
+    audio.addEventListener("pause", render);
+    audio.addEventListener("error", () => {
+      cancelResume();
+      player.classList.add("is-unavailable");
+    });
+
+    // Plays by default unless the visitor muted it before.
+    if (readPreference() !== "off") {
+      play().catch(() => {
+        ACTIVATION_EVENTS.forEach((type) => window.addEventListener(type, resume, true));
+      });
+    }
+  }
+</script>

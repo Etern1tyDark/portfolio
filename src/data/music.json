@@ -1,0 +1,13 @@
+{
+  "title": "XYZ",
+  "artist": "technoplanet",
+  "src": "/xyz-technoplanet.mp3",
+  "volume": 0.2,
+  "offsetMs": 26,
+  "timingPoints": [
+    { "timeMs": 1232, "bpm": 154, "meter": 3 },
+    { "timeMs": 19933, "bpm": 142, "meter": 3 },
+    { "timeMs": 42749, "bpm": 148, "meter": 3 },
+    { "timeMs": 62208, "bpm": 154, "meter": 3 }
+  ]
+}

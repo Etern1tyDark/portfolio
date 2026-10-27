@@ -1,5 +1,6 @@
 ---
 import { withBasePath } from '../utils/withBasePath';
+import music from '../data/music.json';
 
 const titleVariants = [
   "Hello!",
@@ -11,6 +12,7 @@ const titleVariants = [
 
 const lanePhrases = titleVariants;
 const rhythmInputKey = "F";
+const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
 ---
 
 <section class="hero min-h-screen hero-tones relative overflow-hidden">
@@ -51,14 +53,56 @@ const rhythmInputKey = "F";
       </div> -->
     </div>
   </div>
+
+  <dialog id="rhythm-results" class="rhythm-results" aria-labelledby="rhythm-results-title">
+    <div class="rr-card">
+      <p class="rr-eyebrow">RESULT</p>
+      <div class="rr-rank-row">
+        <span class="rr-rank" data-rr="rank">S</span>
+        <span class="rr-badge" data-rr="badge" hidden></span>
+      </div>
+      <h2 id="rhythm-results-title" class="rr-score" data-rr="score">0</h2>
+      <p class="rr-accuracy"><span data-rr="accuracy">0.00</span>%</p>
+      <dl class="rr-stats">
+        <div class="rr-stat critical"><dt>CRITICAL</dt><dd data-rr="critical">0</dd></div>
+        <div class="rr-stat perfect"><dt>PERFECT</dt><dd data-rr="perfect">0</dd></div>
+        <div class="rr-stat great"><dt>GREAT</dt><dd data-rr="great">0</dd></div>
+        <div class="rr-stat good"><dt>GOOD</dt><dd data-rr="good">0</dd></div>
+        <div class="rr-stat miss"><dt>MISS</dt><dd data-rr="miss">0</dd></div>
+        <div class="rr-stat"><dt>MAX COMBO</dt><dd data-rr="combo">0</dd></div>
+      </dl>
+      <p class="rr-offset">Avg. timing <span data-rr="offset">±0ms</span></p>
+      <button type="button" class="rr-retry btn btn-primary" data-rr-close autofocus>Play again</button>
+    </div>
+  </dialog>
 </section>
 
-<script define:vars={{ rhythmInputKey, lanePhrases }} is:inline>
+<script define:vars={{ rhythmInputKey, lanePhrases, timing }} is:inline>
   (() => {
-    const PERFECT_MS = 70;
-    const GOOD_MS = 140;
-    const SPAWN_INTERVAL_MS = 1850;
+    // Hit windows (ms either side of the beat), tightest first.
+    const JUDGEMENTS = [
+      { name: "CRITICAL", ms: 16.67, weight: 1 },
+      { name: "PERFECT", ms: 50, weight: 0.95 },
+      { name: "GREAT", ms: 90, weight: 0.8 },
+      { name: "GOOD", ms: 140, weight: 0.5 },
+    ];
+    const MISS_MS = JUDGEMENTS[JUDGEMENTS.length - 1].ms;
+
+    // How long a note takes to cross the whole lane.
+    const LANE_CROSS_MS = 5600;
+    const LANE_CROSS_MS_MOBILE = 4600;
     const NOTE_GAP_PX = 120;
+    const MIN_NOTE_INTERVAL_MS = 1850;
+    // Notes land on bar lines (every `meter` beats), or every 2nd beat if unset.
+    const BEAT_STEP = 2;
+    // Re-anchor the song clock when it drifts this far from audio.currentTime.
+    const CLOCK_RESYNC_MS = 35;
+
+    // Results screen: a round starts on the first hit and ends after this many notes.
+    const ROUND_NOTES = 10;
+    // Give up on a round quietly if the player walked away mid-way.
+    const ABANDON_MISS_STREAK = 4;
+    const ABANDON_IDLE_MS = 6000;
 
     // Keep the active lane's cleanup on window so a lane is never mounted twice.
     const CLEANUP_KEY = "__rhythmLaneCleanup";
@@ -101,38 +145,198 @@ const rhythmInputKey = "F";
       return note;
     };
 
+    const timingPoints = [...timing.timingPoints].sort((a, b) => a.timeMs - b.timeMs);
+
+    // First bar line at or after `t` (ms into the song) within each tempo section. Returns Infinity past the last beat before `end`.
+    const beatAtOrAfter = (t, points, end) => {
+      for (let i = 0; i < points.length; i += 1) {
+        const sectionStart = points[i].timeMs;
+        const sectionEnd = Math.min(points[i + 1]?.timeMs ?? Infinity, end);
+        if (t >= sectionEnd) continue;
+        const step = (60000 / points[i].bpm) * (points[i].meter ?? BEAT_STEP);
+        const k = Math.max(0, Math.ceil((t - sectionStart - 0.5) / step));
+        const beat = sectionStart + k * step;
+        if (beat < sectionEnd) return beat;
+      }
+      return Infinity;
+    };
+
+    // Song clock. While the track plays, chart time follows audio.currentTime
+    // (smoothed with performance.now(), since currentTime updates coarsely) and
+    // counts loops; otherwise it free-runs at the first section's tempo.
+    const createClock = (audio) => {
+      const playing = !!audio && !audio.paused && audio.readyState >= 2 && audio.duration > 0;
+      if (!playing) {
+        const origin = performance.now();
+        return {
+          synced: false,
+          at: (perfNow) => perfNow - origin,
+          sync: () => {},
+          beatAtOrAfter: (t) => beatAtOrAfter(t, [{ ...timingPoints[0], timeMs: 0 }], Infinity),
+        };
+      }
+
+      const duration = audio.duration * 1000;
+      let loops = 0;
+      let lastRaw = audio.currentTime * 1000;
+      let basePerf = performance.now();
+      let baseChart = lastRaw - timing.offsetMs;
+
+      return {
+        synced: true,
+        at: (perfNow) => baseChart + (perfNow - basePerf) * audio.playbackRate,
+        sync(perfNow) {
+          const raw = audio.currentTime * 1000;
+          if (raw < lastRaw - duration / 2) loops += 1;
+          lastRaw = raw;
+          const actual = loops * duration + raw - timing.offsetMs;
+          if (Math.abs(actual - this.at(perfNow)) > CLOCK_RESYNC_MS) {
+            basePerf = perfNow;
+            baseChart = actual;
+          }
+        },
+        beatAtOrAfter(t) {
+          // Chart time keeps growing across loops; map into the current loop.
+          const shifted = t + timing.offsetMs;
+          const loop = Math.floor(shifted / duration);
+          const local = shifted - loop * duration;
+          let beat = beatAtOrAfter(local, timingPoints, duration);
+          let base = loop * duration;
+          if (beat === Infinity) {
+            base += duration;
+            beat = beatAtOrAfter(0, timingPoints, duration);
+          }
+          return base + beat - timing.offsetMs;
+        },
+      };
+    };
+
     const initRhythmLane = () => {
       const lane = document.getElementById("rhythm-lane");
       const stream = lane?.querySelector(".rhythm-stream");
       const judgementLine = document.getElementById("judgement-line");
       const judgementLabel = document.getElementById("rhythm-judgement");
+      const resultsDialog = document.getElementById("rhythm-results");
       if (!lane || !stream || !judgementLine || !judgementLabel) return () => {};
+      const audio = document.querySelector("[data-music-player] audio");
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-      const isPageActive = () => document.visibilityState === "visible" && document.hasFocus();
+      const isResultsOpen = () => !!resultsDialog?.open;
+      const isPageActive = () =>
+        document.visibilityState === "visible" && document.hasFocus() && !isResultsOpen();
 
       let laneWidth = 0;
       let judgementX = 0;
+      let speedPxPerMs = 0;
       let phraseIndex = 0;
       let rafId = 0;
-      let spawnTimer = 0;
       let clearHitTimer = 0;
       let clearJudgeTimer = 0;
-      let lastFrame = 0;
+      let clock = createClock(null);
+      // Built and measured ahead of time; enters the lane when its lead time comes.
+      let nextNote = null;
 
       const notes = [];
 
-      const clearLoopHandles = () => {
-        window.cancelAnimationFrame(rafId);
-        window.clearTimeout(spawnTimer);
-        rafId = 0;
-        spawnTimer = 0;
+      let round = null;
+      let lastPressAt = 0;
+
+      const startRound = () => ({
+        counts: Object.fromEntries(JUDGEMENTS.map((j) => [j.name, 0])),
+        miss: 0,
+        combo: 0,
+        maxCombo: 0,
+        missStreak: 0,
+        offsetSum: 0,
+      });
+
+      const judgedCount = () =>
+        round ? round.miss + Object.values(round.counts).reduce((sum, n) => sum + n, 0) : 0;
+
+      const registerHit = (name, offsetMs) => {
+        if (!round) round = startRound();
+        round.counts[name] += 1;
+        round.combo += 1;
+        round.maxCombo = Math.max(round.maxCombo, round.combo);
+        round.missStreak = 0;
+        round.offsetSum += offsetMs;
+      };
+
+      const registerMiss = () => {
+        if (!round) return;
+        round.miss += 1;
+        round.combo = 0;
+        round.missStreak += 1;
+        if (round.missStreak >= ABANDON_MISS_STREAK && performance.now() - lastPressAt > ABANDON_IDLE_MS) {
+          round = null;
+        }
+      };
+
+      const rankFor = (accuracy) => {
+        if (accuracy >= 1) return "SSS";
+        if (accuracy >= 0.97) return "SS";
+        if (accuracy >= 0.94) return "S";
+        if (accuracy >= 0.85) return "A";
+        if (accuracy >= 0.7) return "B";
+        if (accuracy >= 0.5) return "C";
+        return "D";
+      };
+
+      const fillResults = (r) => {
+        const set = (key, value) => {
+          const el = resultsDialog.querySelector(`[data-rr="${key}"]`);
+          if (el) el.textContent = String(value);
+        };
+        const hits = Object.values(r.counts).reduce((sum, n) => sum + n, 0);
+        const total = hits + r.miss;
+        const accuracy = JUDGEMENTS.reduce((sum, j) => sum + r.counts[j.name] * j.weight, 0) / total;
+        const avgOffset = hits ? Math.round(r.offsetSum / hits) : 0;
+
+        const rank = rankFor(accuracy);
+        const rankEl = resultsDialog.querySelector('[data-rr="rank"]');
+        if (rankEl) rankEl.dataset.rank = rank;
+        set("rank", rank);
+        set("score", Math.round(accuracy * 1000000).toLocaleString("en-US"));
+        set("accuracy", (accuracy * 100).toFixed(2));
+        for (const j of JUDGEMENTS) set(j.name.toLowerCase(), r.counts[j.name]);
+        set("miss", r.miss);
+        set("combo", r.maxCombo);
+        // Positive offsets mean the press landed before the beat.
+        set("offset", avgOffset === 0 ? "±0ms" : `${avgOffset > 0 ? "+" : ""}${avgOffset}ms (${avgOffset > 0 ? "early" : "late"})`);
+
+        const badge = resultsDialog.querySelector('[data-rr="badge"]');
+        if (badge) {
+          const label =
+            r.counts.CRITICAL === total ? "ALL CRITICAL"
+            : r.counts.CRITICAL + r.counts.PERFECT === total ? "ALL PERFECT"
+            : r.miss === 0 ? "FULL COMBO"
+            : "";
+          badge.textContent = label;
+          badge.hidden = !label;
+        }
+      };
+
+      // Returns true when the results screen took over (and stopped the lane).
+      const maybeFinishRound = () => {
+        if (!round || judgedCount() < ROUND_NOTES) return false;
+        const finished = round;
+        round = null;
+
+        const rect = lane.getBoundingClientRect();
+        const onScreen = rect.bottom > 0 && rect.top < window.innerHeight;
+        if (!resultsDialog || !onScreen || document.visibilityState !== "visible") return false;
+
+        fillResults(finished);
+        clearLane();
+        resultsDialog.showModal();
+        return true;
       };
 
       const clearLane = () => {
-        clearLoopHandles();
+        window.cancelAnimationFrame(rafId);
+        rafId = 0;
         notes.length = 0;
+        nextNote = null;
         stream.innerHTML = "";
-        lastFrame = 0;
       };
 
       const recalcMetrics = () => {
@@ -140,10 +344,12 @@ const rhythmInputKey = "F";
         laneWidth = laneRect.width;
         const judgementRect = judgementLine.getBoundingClientRect();
         judgementX = judgementRect.left - laneRect.left + judgementRect.width * 0.5;
+        speedPxPerMs = laneWidth / (window.innerWidth < 768 ? LANE_CROSS_MS_MOBILE : LANE_CROSS_MS);
       };
 
-      const renderNote = (note) => {
-        const center = note.x + note.width * 0.5;
+      const renderNote = (note, x) => {
+        note.x = x;
+        const center = x + note.width * 0.5;
         const rightFadeStart = laneWidth - 180;
         const leftFadeEnd = 180;
 
@@ -155,13 +361,18 @@ const rhythmInputKey = "F";
         }
 
         note.el.style.opacity = String(opacity);
-        note.el.style.transform = `translate(${note.x}px, -55%)`;
+        note.el.style.transform = `translate(${x}px, -55%)`;
       };
 
-      const showJudgement = (type, offsetMs) => {
+      const noteX = (note, chartTime) => judgementX + (note.hitTime - chartTime) * speedPxPerMs - note.width * 0.5;
+
+      // Time before its beat at which a note must appear at the lane's right edge.
+      const leadMs = (width) => (laneWidth + 72 - judgementX + width * 0.5) / speedPxPerMs;
+
+      const showJudgement = (name, offsetMs) => {
         const signed = offsetMs > 0 ? "+" + offsetMs : String(offsetMs);
-        judgementLabel.textContent = `${type} ${signed}ms`;
-        judgementLabel.className = `hero-rhythm-judge is-visible ${type.toLowerCase()}`;
+        judgementLabel.textContent = `${name} ${signed}ms`;
+        judgementLabel.className = `hero-rhythm-judge is-visible ${name.toLowerCase()}`;
 
         window.clearTimeout(clearJudgeTimer);
         clearJudgeTimer = window.setTimeout(() => {
@@ -180,30 +391,20 @@ const rhythmInputKey = "F";
         }, 160);
       };
 
-      const spawnNote = () => {
+      // Build the next phrase and pick the first beat it fits on without
+      // crowding the previous note.
+      const planNote = (chartTime, prev) => {
         const phrase = lanePhrases[phraseIndex % lanePhrases.length];
         phraseIndex += 1;
 
         const el = buildNoteElement(phrase);
         stream.appendChild(el);
-
         const width = el.offsetWidth;
-        const startX = laneWidth + 72;
-        const endX = -(width + 140);
-        const travelMs = window.innerWidth < 768 ? 7360 : 8640;
-        const speedPxPerMs = (startX - endX) / travelMs;
 
-        const note = {
-          el,
-          width,
-          startX,
-          endX,
-          x: startX,
-          speedPxPerMs,
-          hit: false,
-        };
-        notes.push(note);
-        return note;
+        const earliest = prev
+          ? prev.hitTime + Math.max(MIN_NOTE_INTERVAL_MS, ((prev.width + width) * 0.5 + NOTE_GAP_PX) / speedPxPerMs)
+          : chartTime + leadMs(width);
+        return { el, width, x: laneWidth, hitTime: clock.beatAtOrAfter(earliest), hit: false, judged: false };
       };
 
       const removeNote = (note, hit) => {
@@ -216,7 +417,13 @@ const rhythmInputKey = "F";
         }, hit ? 130 : 80);
       };
 
-      const updateNotes = (dt) => {
+      const updateNotes = (chartTime) => {
+        if (!nextNote) nextNote = planNote(chartTime, notes[notes.length - 1]);
+        while (nextNote && chartTime >= nextNote.hitTime - leadMs(nextNote.width)) {
+          notes.push(nextNote);
+          nextNote = planNote(chartTime, nextNote);
+        }
+
         for (let i = notes.length - 1; i >= 0; i -= 1) {
           const note = notes[i];
           if (note.hit) {
@@ -224,53 +431,48 @@ const rhythmInputKey = "F";
             continue;
           }
 
-          note.x -= note.speedPxPerMs * dt;
+          if (!note.judged && chartTime - note.hitTime > MISS_MS) {
+            note.judged = true;
+            registerMiss();
+          }
 
-          if (note.x + note.width < -140) {
+          const x = noteX(note, chartTime);
+          if (x + note.width < -140) {
             removeNote(note, false);
             notes.splice(i, 1);
             continue;
           }
 
-          renderNote(note);
+          renderNote(note, x);
         }
       };
 
-      const findBestNote = () => {
-        let best = null;
-        let bestAbsOffset = Infinity;
-        let bestOffset = 0;
-
-        for (const note of notes) {
-          if (note.hit) continue;
-          const centerX = note.x + note.width * 0.5;
-          const offsetMs = (centerX - judgementX) / note.speedPxPerMs;
-          const absOffset = Math.abs(offsetMs);
-
-          if (absOffset < bestAbsOffset) {
-            best = note;
-            bestAbsOffset = absOffset;
-            bestOffset = offsetMs;
-          }
-        }
-
-        return { best, bestAbsOffset, bestOffset };
-      };
-
-      const triggerHit = () => {
+      const triggerHit = (eventTime) => {
+        if (isResultsOpen() || !rafId) return;
+        lastPressAt = performance.now();
         pulseJudgementLine();
 
-        const { best, bestAbsOffset, bestOffset } = findBestNote();
-        if (!best || bestAbsOffset > GOOD_MS) return;
+        // Judge against the moment of the press, not the last rendered frame.
+        const chartTime = clock.at(eventTime);
+        let best = null;
+        let bestOffset = Infinity;
+        for (const note of notes) {
+          if (note.hit || note.judged) continue;
+          const offset = note.hitTime - chartTime;
+          if (Math.abs(offset) < Math.abs(bestOffset)) {
+            best = note;
+            bestOffset = offset;
+          }
+        }
+        const judgement = best && JUDGEMENTS.find((j) => Math.abs(bestOffset) <= j.ms);
+        if (!judgement) return;
 
         const roundedOffset = Math.round(bestOffset);
-        if (bestAbsOffset <= PERFECT_MS) {
-          showJudgement("PERFECT", roundedOffset);
-        } else {
-          showJudgement("GOOD", roundedOffset);
-        }
-
+        best.judged = true;
+        showJudgement(judgement.name, roundedOffset);
+        registerHit(judgement.name, roundedOffset);
         removeNote(best, true);
+        maybeFinishRound();
       };
 
       const onKeyDown = (event) => {
@@ -279,28 +481,18 @@ const rhythmInputKey = "F";
         if (isEditableTarget(event.target)) return;
 
         event.preventDefault();
-        triggerHit();
+        triggerHit(event.timeStamp);
       };
 
       const frame = (now) => {
         if (!isPageActive()) {
-          clearLoopHandles();
-          lastFrame = 0;
+          clearLane();
           return;
         }
-        if (!lastFrame) lastFrame = now;
-        const dt = Math.min(50, now - lastFrame);
-        lastFrame = now;
-        updateNotes(dt);
+        clock.sync(now);
+        updateNotes(clock.at(now));
+        if (maybeFinishRound()) return;
         rafId = window.requestAnimationFrame(frame);
-      };
-
-      const scheduleSpawn = () => {
-        if (!isPageActive()) return;
-        const note = spawnNote();
-        const gapMs = (note.width + NOTE_GAP_PX) / note.speedPxPerMs;
-        const nextDelay = Math.max(SPAWN_INTERVAL_MS, Math.round(gapMs));
-        spawnTimer = window.setTimeout(scheduleSpawn, nextDelay);
       };
 
       const start = () => {
@@ -315,9 +507,7 @@ const rhythmInputKey = "F";
           return;
         }
 
-        const firstNote = spawnNote();
-        const firstGapMs = (firstNote.width + NOTE_GAP_PX) / firstNote.speedPxPerMs;
-        spawnTimer = window.setTimeout(scheduleSpawn, Math.max(SPAWN_INTERVAL_MS, Math.round(firstGapMs)));
+        clock = createClock(audio);
         rafId = window.requestAnimationFrame(frame);
       };
 
@@ -329,6 +519,24 @@ const rhythmInputKey = "F";
         }
       };
 
+      // Switching between the song clock and the free-running one moves the beat
+      // grid, so start the lane over.
+      const onAudioChange = () => {
+        if (clock.synced !== !audio.paused || audio.seeking) handleActivityChange();
+      };
+
+      const closeResults = () => resultsDialog?.close();
+      const onResultsClick = (event) => {
+        // Backdrop clicks land on the <dialog> itself.
+        if (event.target === resultsDialog || event.target.closest?.("[data-rr-close]")) closeResults();
+      };
+      const onResultsClose = () => {
+        round = null;
+        handleActivityChange();
+      };
+      resultsDialog?.addEventListener("click", onResultsClick);
+      resultsDialog?.addEventListener("close", onResultsClose);
+
       let disposed = false;
       const fontsReady = "fonts" in document ? document.fonts.ready : Promise.resolve();
       fontsReady.then(() => {
@@ -337,17 +545,23 @@ const rhythmInputKey = "F";
         if (!disposed) handleActivityChange();
       });
 
-      window.addEventListener("resize", recalcMetrics);
+      const onResize = () => {
+        recalcMetrics();
+      };
+      window.addEventListener("resize", onResize);
       window.addEventListener("keydown", onKeyDown);
       document.addEventListener("visibilitychange", handleActivityChange);
       window.addEventListener("focus", handleActivityChange);
       window.addEventListener("blur", handleActivityChange);
+      audio?.addEventListener("playing", onAudioChange);
+      audio?.addEventListener("pause", onAudioChange);
+      audio?.addEventListener("seeked", onAudioChange);
 
       const onMobileTap = (e) => {
         e.preventDefault();
-        triggerHit();
+        triggerHit(e.timeStamp);
       };
-      
+
       const mobileBtn = document.getElementById("mobile-rhythm-btn");
       if (mobileBtn) {
         mobileBtn.addEventListener("pointerdown", onMobileTap);
@@ -355,18 +569,23 @@ const rhythmInputKey = "F";
 
       return () => {
         disposed = true;
-        window.removeEventListener("resize", recalcMetrics);
+        window.removeEventListener("resize", onResize);
         window.removeEventListener("keydown", onKeyDown);
         document.removeEventListener("visibilitychange", handleActivityChange);
         window.removeEventListener("focus", handleActivityChange);
         window.removeEventListener("blur", handleActivityChange);
+        audio?.removeEventListener("playing", onAudioChange);
+        audio?.removeEventListener("pause", onAudioChange);
+        audio?.removeEventListener("seeked", onAudioChange);
         if (mobileBtn) {
           mobileBtn.removeEventListener("pointerdown", onMobileTap);
         }
-        clearLoopHandles();
+        resultsDialog?.removeEventListener("click", onResultsClick);
+        resultsDialog?.removeEventListener("close", onResultsClose);
+        if (resultsDialog?.open) resultsDialog.close();
         window.clearTimeout(clearHitTimer);
         window.clearTimeout(clearJudgeTimer);
-        stream.innerHTML = "";
+        clearLane();
       };
     };
 
@@ -635,9 +854,19 @@ const rhythmInputKey = "F";
     text-shadow: 0 0 12px rgba(125, 255, 197, 0.5);
   }
 
-  .hero-rhythm-judge.good {
+  .hero-rhythm-judge.critical {
+    color: #ffd27a;
+    text-shadow: 0 0 14px rgba(224, 175, 104, 0.6);
+  }
+
+  .hero-rhythm-judge.great {
     color: rgba(125, 207, 255, 0.95);
     text-shadow: 0 0 12px rgba(125, 207, 255, 0.45);
+  }
+
+  .hero-rhythm-judge.good {
+    color: rgba(187, 154, 247, 0.95);
+    text-shadow: 0 0 12px rgba(187, 154, 247, 0.45);
   }
 
   .hero-rhythm-hint kbd {
@@ -724,7 +953,280 @@ const rhythmInputKey = "F";
     background: rgba(122, 162, 247, 0.3);
   }
 
+  /* Results screen */
+  .rhythm-results {
+    margin: auto;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: inherit;
+    max-width: min(26rem, calc(100vw - 2rem));
+    width: 100%;
+  }
+
+  .rhythm-results::backdrop {
+    background: rgba(10, 12, 20, 0.62);
+    backdrop-filter: blur(4px);
+  }
+
+  .rhythm-results[open] .rr-card {
+    animation: rr-card-in 420ms cubic-bezier(0.33, 1, 0.68, 1);
+  }
+
+  .rhythm-results[open] .rr-rank {
+    animation: rr-rank-in 520ms 120ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  }
+
+  .rr-card {
+    position: relative;
+    overflow: hidden;
+    padding: 1.6rem 1.5rem 1.4rem;
+    border-radius: 1.2rem;
+    border: 1px solid rgba(122, 162, 247, 0.35);
+    background: linear-gradient(180deg, rgba(36, 40, 59, 0.96), rgba(20, 24, 37, 0.97));
+    box-shadow: inset 0 0 40px rgba(122, 162, 247, 0.08), 0 24px 60px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+  }
+
+  .rr-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(125, 207, 255, 0.95), transparent);
+    box-shadow: 0 0 18px rgba(125, 207, 255, 0.7);
+  }
+
+  .rr-eyebrow {
+    font-size: 0.68rem;
+    letter-spacing: 0.32em;
+    color: rgba(192, 202, 245, 0.7);
+  }
+
+  .rr-rank-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 0.35rem;
+  }
+
+  .rr-rank {
+    font-size: 4.2rem;
+    font-weight: 800;
+    line-height: 1;
+    font-style: italic;
+    color: rgba(147, 197, 253, 0.95);
+    text-shadow: 0 0 24px rgba(125, 207, 255, 0.5);
+  }
+
+  .rr-rank[data-rank="SSS"],
+  .rr-rank[data-rank="SS"],
+  .rr-rank[data-rank="S"] {
+    background: linear-gradient(180deg, #ffe7a3, #e0af68 55%, #ff9e64);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 0 14px rgba(224, 175, 104, 0.45));
+  }
+
+  .rr-rank[data-rank="C"],
+  .rr-rank[data-rank="D"] {
+    color: rgba(169, 177, 214, 0.75);
+    text-shadow: none;
+  }
+
+  .rr-badge {
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid rgba(125, 255, 197, 0.55);
+    color: rgba(125, 255, 197, 0.95);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    box-shadow: 0 0 14px rgba(125, 255, 197, 0.25);
+  }
+
+  .rr-score {
+    margin-top: 0.6rem;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: #c0caf5;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rr-accuracy {
+    font-size: 0.95rem;
+    color: rgba(125, 207, 255, 0.95);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rr-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 1.1rem 0 0;
+  }
+
+  .rr-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0.5rem 0.7rem;
+    border-radius: 0.6rem;
+    background: rgba(122, 162, 247, 0.08);
+    border: 1px solid rgba(122, 162, 247, 0.16);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    color: rgba(192, 202, 245, 0.8);
+  }
+
+  .rr-stat dd {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #c0caf5;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rr-stat.perfect dt {
+    color: rgba(125, 255, 197, 0.95);
+  }
+
+  .rr-stat.critical dt {
+    color: #ffd27a;
+  }
+
+  .rr-stat.great dt {
+    color: rgba(125, 207, 255, 0.95);
+  }
+
+  .rr-stat.good dt {
+    color: rgba(187, 154, 247, 0.95);
+  }
+
+  .rr-stat.miss dt {
+    color: rgba(247, 118, 142, 0.95);
+  }
+
+  .rr-offset {
+    margin-top: 0.85rem;
+    font-size: 0.74rem;
+    color: rgba(192, 202, 245, 0.65);
+  }
+
+  .rr-retry {
+    margin-top: 1.1rem;
+    width: 100%;
+    border-radius: 0.75rem;
+  }
+
+  @keyframes rr-card-in {
+    from {
+      opacity: 0;
+      transform: translateY(14px) scale(0.97);
+    }
+  }
+
+  @keyframes rr-rank-in {
+    from {
+      opacity: 0;
+      transform: scale(1.8);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rhythm-results[open] .rr-card,
+    .rhythm-results[open] .rr-rank {
+      animation: none;
+    }
+  }
+
   /* Light theme */
+  :global(html.light) .rhythm-results::backdrop {
+    background: rgba(52, 59, 88, 0.35);
+  }
+
+  :global(html.light) .rr-card {
+    border-color: rgba(42, 91, 184, 0.25);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(236, 238, 245, 0.98));
+    box-shadow: 0 24px 60px rgba(52, 59, 88, 0.22);
+  }
+
+  :global(html.light) .rr-card::before {
+    background: linear-gradient(90deg, transparent, rgba(0, 106, 142, 0.85), transparent);
+    box-shadow: none;
+  }
+
+  :global(html.light) .rr-eyebrow,
+  :global(html.light) .rr-offset,
+  :global(html.light) .rr-stat {
+    color: rgba(59, 66, 97, 0.8);
+  }
+
+  :global(html.light) .rr-rank {
+    color: #2a5bb8;
+    text-shadow: none;
+  }
+
+  :global(html.light) .rr-rank[data-rank="SSS"],
+  :global(html.light) .rr-rank[data-rank="SS"],
+  :global(html.light) .rr-rank[data-rank="S"] {
+    background: linear-gradient(180deg, #d9a43a, #b5651d);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: none;
+  }
+
+  :global(html.light) .rr-rank[data-rank="C"],
+  :global(html.light) .rr-rank[data-rank="D"] {
+    color: #6172b0;
+  }
+
+  :global(html.light) .rr-badge {
+    border-color: rgba(29, 122, 79, 0.5);
+    color: #1d7a4f;
+    box-shadow: none;
+  }
+
+  :global(html.light) .rr-score,
+  :global(html.light) .rr-stat dd {
+    color: #2f3550;
+  }
+
+  :global(html.light) .rr-accuracy {
+    color: #1d63a8;
+  }
+
+  :global(html.light) .rr-stat {
+    background: rgba(42, 91, 184, 0.06);
+    border-color: rgba(42, 91, 184, 0.14);
+  }
+
+  :global(html.light) .rr-stat.perfect dt {
+    color: #1d7a4f;
+  }
+
+  :global(html.light) .rr-stat.critical dt {
+    color: #9a6a12;
+  }
+
+  :global(html.light) .rr-stat.great dt {
+    color: #1d63a8;
+  }
+
+  :global(html.light) .rr-stat.good dt {
+    color: #7c3fc4;
+  }
+
+  :global(html.light) .rr-stat.miss dt {
+    color: #c4314b;
+  }
+
   :global(html.light) .hero-tones {
     background: radial-gradient(circle at 20% 20%, rgba(46, 125, 233, 0.16), transparent 35%),
       radial-gradient(circle at 80% 10%, rgba(152, 84, 241, 0.13), transparent 35%),
@@ -781,8 +1283,18 @@ const rhythmInputKey = "F";
     text-shadow: none;
   }
 
-  :global(html.light) .hero-rhythm-judge.good {
+  :global(html.light) .hero-rhythm-judge.critical {
+    color: #9a6a12;
+    text-shadow: none;
+  }
+
+  :global(html.light) .hero-rhythm-judge.great {
     color: #1d63a8;
+    text-shadow: none;
+  }
+
+  :global(html.light) .hero-rhythm-judge.good {
+    color: #7c3fc4;
     text-shadow: none;
   }
 

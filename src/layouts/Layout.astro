@@ -3,6 +3,7 @@ import '../styles/global.css';
 import NoiseBackground from '../sugarize/NoiseBackground.astro';
 import RubberBackground from '../sugarize/RubberBackground.astro';
 import Footer from '../components/Footer.astro';
+import MusicPlayer from '../components/MusicPlayer.astro';
 import { ClientRouter } from 'astro:transitions';
 import { withBasePath } from '../utils/withBasePath';
 
@@ -120,7 +121,7 @@ const ldItems = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
     {!disableRubber && <RubberBackground />}
     <slot />
     <Footer />
-
+    <MusicPlayer />
   </body>
 </html>
 
