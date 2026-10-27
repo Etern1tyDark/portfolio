@@ -157,15 +157,30 @@ const lightAccents: Record<string, string> = {
   }
 
   @media (max-width: 640px) {
+    /* Three smaller tiles per row keeps the grid to a couple of screens. */
     .tiles-grid {
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      justify-items: center;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.6rem;
+      margin-top: 1.75rem;
     }
 
     .skill-tile {
       width: 100%;
-      max-width: 220px;
       aspect-ratio: 1;
+      border-radius: 14px;
+      gap: 0.45rem;
+    }
+
+    .skill-icon {
+      width: 36px;
+      height: 36px;
+    }
+
+    .tile-label {
+      font-size: 0.72rem;
+      text-align: center;
+      line-height: 1.15;
+      padding: 0 0.25rem;
     }
   }
 </style>

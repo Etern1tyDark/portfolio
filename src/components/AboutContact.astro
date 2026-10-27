@@ -14,7 +14,14 @@ import { withBasePath } from '../utils/withBasePath';
       <h3 class="text-xl font-bold text-cyan-300">Direct</h3>
       <ul class="contact-list">
         <li><span>Email:</span> <a href="mailto:nathankhopancras@gmail.com">nathankhopancras@gmail.com</a></li>
-        <li><span>Phone:</span> <a href="tel:+628113001115">+62 811 300 1115</a></li>
+        <li>
+          <span>Discord:</span>
+          <a href="https://discord.com/users/461725672658698267" target="_blank" rel="noopener noreferrer">etern1tydark</a>
+          <button type="button" class="copy-handle" data-copy="etern1tydark" title="Copy username" aria-label="Copy Discord username">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+          </button>
+          <small class="copy-status" aria-live="polite"></small>
+        </li>
       </ul>
     </article>
 
@@ -67,6 +74,35 @@ import { withBasePath } from '../utils/withBasePath';
     margin-right: 0.35rem;
   }
 
+  .copy-handle {
+    display: inline-flex;
+    vertical-align: middle;
+    margin-left: 0.3rem;
+    padding: 0.2rem;
+    border-radius: 0.35rem;
+    color: rgba(192, 202, 245, 0.65);
+    cursor: copy;
+  }
+
+  .copy-handle:hover {
+    color: #7aa2f7;
+    background: rgba(122, 162, 247, 0.12);
+  }
+
+  .copy-status {
+    margin-left: 0.4rem;
+    font-size: 0.75rem;
+    color: #9ece6a;
+  }
+
+  :global(html.light) .copy-handle {
+    color: #646a88;
+  }
+
+  :global(html.light) .copy-status {
+    color: #1d7a4f;
+  }
+
   :global(html.light) .contact-list {
     color: #3b4261;
   }
@@ -104,3 +140,19 @@ import { withBasePath } from '../utils/withBasePath';
     margin-top: 0.25rem;
   }
 </style>
+
+<script>
+  // Copy the Discord handle for "Add Friend" (the profile link needs a Discord login).
+  document.addEventListener("click", async (event) => {
+    const button = (event.target as Element | null)?.closest<HTMLElement>("[data-copy]");
+    if (!button) return;
+    const status = button.parentElement?.querySelector(".copy-status");
+    try {
+      await navigator.clipboard.writeText(button.dataset.copy ?? "");
+      if (status) status.textContent = "Copied!";
+    } catch {
+      if (status) status.textContent = "Copy failed";
+    }
+    window.setTimeout(() => status && (status.textContent = ""), 1800);
+  });
+</script>

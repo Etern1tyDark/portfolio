@@ -43,6 +43,12 @@ const track = { ...music, src: withBasePath(music.src) };
     font-family: "Fira Code", monospace;
     color: #c0caf5;
     max-width: calc(100vw - 2rem);
+    transition: opacity 250ms ease;
+  }
+
+  /* Get out of the way of the content being scrolled past. */
+  .music-player.is-scrolling:not(:hover):not(:focus-within) {
+    opacity: 0.3;
   }
 
   .music-player.is-unavailable {
@@ -151,12 +157,25 @@ const track = { ...music, src: withBasePath(music.src) };
   }
 
   @media (max-width: 480px) {
+    /* Just the button on phones; the bars inside it show it's playing. */
     .music-player {
-      padding-right: 0.35rem;
+      right: calc(0.75rem + env(safe-area-inset-right, 0px));
+      bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+      padding: 0.25rem;
+      background: rgba(26, 27, 38, 0.7);
     }
 
-    .music-label {
+    .music-label,
+    .music-eq {
       display: none;
+    }
+
+    .music-player.is-playing .music-toggle {
+      box-shadow: 0 0 0 2px rgba(122, 162, 247, 0.45);
+    }
+
+    :global(html.light) .music-player {
+      background: rgba(255, 255, 255, 0.75);
     }
   }
 
@@ -251,6 +270,17 @@ const track = { ...music, src: withBasePath(music.src) };
       cancelResume();
       player.classList.add("is-unavailable");
     });
+
+    let scrollTimer = 0;
+    window.addEventListener(
+      "scroll",
+      () => {
+        player.classList.add("is-scrolling");
+        window.clearTimeout(scrollTimer);
+        scrollTimer = window.setTimeout(() => player.classList.remove("is-scrolling"), 700);
+      },
+      { passive: true },
+    );
 
     // Plays by default unless the visitor muted it before.
     if (readPreference() !== "off") {

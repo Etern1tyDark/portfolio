@@ -72,6 +72,13 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         <div class="rr-stat"><dt>MAX COMBO</dt><dd data-rr="combo">0</dd></div>
       </dl>
       <p class="rr-offset">Avg. timing <span data-rr="offset">±0ms</span></p>
+      <div class="rr-calibrate" data-rr-calibrate hidden>
+        <span class="rr-calibrate-label" title="Shifts notes against the music on this device. Raise it if notes feel early compared to what you hear.">Offset</span>
+        <button type="button" class="rr-step" data-rr-offset="-5" aria-label="Notes 5ms earlier">−</button>
+        <output class="rr-calibrate-value" data-rr="user-offset">+0ms</output>
+        <button type="button" class="rr-step" data-rr-offset="5" aria-label="Notes 5ms later">+</button>
+        <button type="button" class="rr-auto" data-rr-offset="auto" data-rr="auto">Match avg</button>
+      </div>
       <button type="button" class="rr-retry btn btn-primary" data-rr-close autofocus>Play again</button>
     </div>
   </dialog>
@@ -93,6 +100,9 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
     const LANE_CROSS_MS_MOBILE = 4600;
     const NOTE_GAP_PX = 120;
     const MIN_NOTE_INTERVAL_MS = 1850;
+    // The first note starts part-way across so the lane isn't empty on load.
+    const FIRST_NOTE_LEAD_MS = 1600;
+    const NOTE_FADE_IN_MS = 280;
     // Notes land on bar lines (every `meter` beats), or every 2nd beat if unset.
     const BEAT_STEP = 2;
     // audio.currentTime is coarse and jittery (badly so in Firefox: it can sit
@@ -107,6 +117,29 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
     // Give up on a round quietly if the player walked away mid-way.
     const ABANDON_MISS_STREAK = 4;
     const ABANDON_IDLE_MS = 6000;
+
+    // Per-device offset on top of the track's (audio output delay differs a lot
+    // between devices, e.g. phones and Bluetooth headphones).
+    const USER_OFFSET_KEY = "rhythm-offset";
+    const USER_OFFSET_LIMIT_MS = 300;
+
+    const readUserOffset = () => {
+      try {
+        return Number(localStorage.getItem(USER_OFFSET_KEY)) || 0;
+      } catch {
+        return 0;
+      }
+    };
+
+    const writeUserOffset = (value) => {
+      const clamped = Math.max(-USER_OFFSET_LIMIT_MS, Math.min(USER_OFFSET_LIMIT_MS, Math.round(value)));
+      try {
+        localStorage.setItem(USER_OFFSET_KEY, String(clamped));
+      } catch {}
+      return clamped;
+    };
+
+    const formatMs = (ms) => (ms === 0 ? "±0ms" : `${ms > 0 ? "+" : ""}${ms}ms`);
 
     // Keep the active lane's cleanup on window so a lane is never mounted twice.
     const CLEANUP_KEY = "__rhythmLaneCleanup";
@@ -180,11 +213,13 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         };
       }
 
+      // Positive offsets make notes arrive later relative to the music.
+      const offsetMs = timing.offsetMs + readUserOffset();
       const duration = audio.duration * 1000;
       let loops = 0;
       let lastRaw = audio.currentTime * 1000;
       let basePerf = performance.now();
-      let baseChart = lastRaw - timing.offsetMs;
+      let baseChart = lastRaw - offsetMs;
 
       return {
         synced: true,
@@ -195,7 +230,7 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
           if (raw === lastRaw) return;
           if (raw < lastRaw - duration / 2) loops += 1;
           lastRaw = raw;
-          const error = loops * duration + raw - timing.offsetMs - this.at(perfNow);
+          const error = loops * duration + raw - offsetMs - this.at(perfNow);
           if (Math.abs(error) > CLOCK_SNAP_MS) {
             basePerf = perfNow;
             baseChart += error;
@@ -205,7 +240,7 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         },
         beatAtOrAfter(t) {
           // Chart time keeps growing across loops; map into the current loop.
-          const shifted = t + timing.offsetMs;
+          const shifted = t + offsetMs;
           const loop = Math.floor(shifted / duration);
           const local = shifted - loop * duration;
           let beat = beatAtOrAfter(local, timingPoints, duration);
@@ -214,7 +249,7 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
             base += duration;
             beat = beatAtOrAfter(0, timingPoints, duration);
           }
-          return base + beat - timing.offsetMs;
+          return base + beat - offsetMs;
         },
       };
     };
@@ -256,6 +291,7 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         maxCombo: 0,
         missStreak: 0,
         offsetSum: 0,
+        synced: clock.synced,
       });
 
       const judgedCount = () =>
@@ -290,6 +326,30 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         return "D";
       };
 
+      let lastAvgOffset = 0;
+
+      const renderUserOffset = () => {
+        const value = resultsDialog.querySelector('[data-rr="user-offset"]');
+        if (value) value.textContent = formatMs(readUserOffset());
+        const auto = resultsDialog.querySelector('[data-rr="auto"]');
+        if (auto) {
+          // Late presses (negative average) mean the notes should come later.
+          auto.textContent = `Match avg (${formatMs(readUserOffset() - lastAvgOffset)})`;
+          auto.disabled = lastAvgOffset === 0;
+        }
+      };
+
+      const adjustUserOffset = (action) => {
+        const current = readUserOffset();
+        if (action === "auto") {
+          writeUserOffset(current - lastAvgOffset);
+          lastAvgOffset = 0;
+        } else {
+          writeUserOffset(current + Number(action));
+        }
+        renderUserOffset();
+      };
+
       const fillResults = (r) => {
         const set = (key, value) => {
           const el = resultsDialog.querySelector(`[data-rr="${key}"]`);
@@ -310,7 +370,13 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         set("miss", r.miss);
         set("combo", r.maxCombo);
         // Positive offsets mean the press landed before the beat.
-        set("offset", avgOffset === 0 ? "±0ms" : `${avgOffset > 0 ? "+" : ""}${avgOffset}ms (${avgOffset > 0 ? "early" : "late"})`);
+        set("offset", avgOffset === 0 ? "±0ms" : `${formatMs(avgOffset)} (${avgOffset > 0 ? "early" : "late"})`);
+
+        // The offset only lines notes up with the music, so offer it when it played.
+        lastAvgOffset = avgOffset;
+        const calibrate = resultsDialog.querySelector("[data-rr-calibrate]");
+        if (calibrate) calibrate.hidden = !r.synced;
+        renderUserOffset();
 
         const badge = resultsDialog.querySelector('[data-rr="badge"]');
         if (badge) {
@@ -356,7 +422,7 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         speedPxPerMs = laneWidth / (window.innerWidth < 768 ? LANE_CROSS_MS_MOBILE : LANE_CROSS_MS);
       };
 
-      const renderNote = (note, x) => {
+      const renderNote = (note, x, fadeIn) => {
         note.x = x;
         const center = x + note.width * 0.5;
         const rightFadeStart = laneWidth - 180;
@@ -369,7 +435,7 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
           opacity = Math.max(0, center / 180);
         }
 
-        note.el.style.opacity = String(opacity);
+        note.el.style.opacity = String(opacity * fadeIn);
         note.el.style.transform = `translate(${x}px, -55%)`;
       };
 
@@ -412,7 +478,7 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
 
         const earliest = prev
           ? prev.hitTime + Math.max(MIN_NOTE_INTERVAL_MS, ((prev.width + width) * 0.5 + NOTE_GAP_PX) / speedPxPerMs)
-          : chartTime + leadMs(width);
+          : chartTime + Math.min(leadMs(width), FIRST_NOTE_LEAD_MS);
         return { el, width, x: laneWidth, hitTime: clock.beatAtOrAfter(earliest), hit: false, judged: false };
       };
 
@@ -429,6 +495,7 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
       const updateNotes = (chartTime) => {
         if (!nextNote) nextNote = planNote(chartTime, notes[notes.length - 1]);
         while (nextNote && chartTime >= nextNote.hitTime - leadMs(nextNote.width)) {
+          nextNote.shownAt = chartTime;
           notes.push(nextNote);
           nextNote = planNote(chartTime, nextNote);
         }
@@ -452,7 +519,7 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
             continue;
           }
 
-          renderNote(note, x);
+          renderNote(note, x, Math.min(1, (chartTime - note.shownAt) / NOTE_FADE_IN_MS));
         }
       };
 
@@ -540,7 +607,9 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
       const closeResults = () => resultsDialog?.close();
       const onResultsClick = (event) => {
         // Backdrop clicks land on the <dialog> itself.
-        if (event.target === resultsDialog || event.target.closest?.("[data-rr-close]")) closeResults();
+        const offsetButton = event.target.closest?.("[data-rr-offset]");
+        if (offsetButton) adjustUserOffset(offsetButton.dataset.rrOffset);
+        else if (event.target === resultsDialog || event.target.closest?.("[data-rr-close]")) closeResults();
       };
       const onResultsClose = () => {
         round = null;
@@ -1132,6 +1201,68 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
     color: rgba(192, 202, 245, 0.65);
   }
 
+  .rr-calibrate {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+    font-size: 0.74rem;
+    color: rgba(192, 202, 245, 0.75);
+  }
+
+  .rr-calibrate[hidden] {
+    display: none;
+  }
+
+  .rr-calibrate-label {
+    margin-right: 0.15rem;
+    letter-spacing: 0.08em;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+    cursor: help;
+  }
+
+  .rr-calibrate-value {
+    min-width: 3.6rem;
+    font-weight: 700;
+    color: #c0caf5;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rr-step,
+  .rr-auto {
+    height: 1.8rem;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(122, 162, 247, 0.3);
+    background: rgba(122, 162, 247, 0.1);
+    color: #7dcfff;
+    font-family: inherit;
+    transition: background-color 150ms ease;
+  }
+
+  .rr-step {
+    width: 1.8rem;
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .rr-auto {
+    padding: 0 0.6rem;
+    font-size: 0.7rem;
+  }
+
+  .rr-step:hover,
+  .rr-auto:hover:not(:disabled) {
+    background: rgba(122, 162, 247, 0.22);
+  }
+
+  .rr-auto:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
   .rr-retry {
     margin-top: 1.1rem;
     width: 100%;
@@ -1210,6 +1341,21 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
   :global(html.light) .rr-score,
   :global(html.light) .rr-stat dd {
     color: #2f3550;
+  }
+
+  :global(html.light) .rr-calibrate {
+    color: rgba(59, 66, 97, 0.8);
+  }
+
+  :global(html.light) .rr-calibrate-value {
+    color: #2f3550;
+  }
+
+  :global(html.light) .rr-step,
+  :global(html.light) .rr-auto {
+    border-color: rgba(42, 91, 184, 0.3);
+    background: rgba(42, 91, 184, 0.07);
+    color: #2a5bb8;
   }
 
   :global(html.light) .rr-accuracy {

@@ -1,0 +1,185 @@
+---
+import { statSync } from 'node:fs';
+import { join } from 'node:path';
+import { withBasePath } from '../utils/withBasePath';
+
+interface Props {
+  src: string;
+  title: string;
+}
+
+const { src, title } = Astro.props;
+const href = withBasePath(src);
+const fileName = decodeURIComponent(src.split('/').pop() ?? 'writeup.pdf');
+
+// Shown next to the download button; skipped if the file isn't in public/.
+let size = '';
+try {
+  const bytes = statSync(join(process.cwd(), 'public', decodeURIComponent(src))).size;
+  size = bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+} catch {}
+---
+
+<figure class="pdf-viewer">
+  <div class="pdf-head">
+    <span class="pdf-icon" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8M16 13H8M16 17H8"/></svg>
+    </span>
+    <figcaption class="pdf-caption">
+      <span class="pdf-title">{fileName}</span>
+      <span class="pdf-meta">PDF{size && ` · ${size}`}</span>
+    </figcaption>
+    <div class="pdf-actions">
+      <a class="pdf-btn pdf-btn-primary" href={href} target="_blank" rel="noopener">Open</a>
+      <a class="pdf-btn" href={href} download={fileName}>Download</a>
+    </div>
+  </div>
+  <div class="pdf-frame">
+    <iframe src={`${href}#view=FitH`} title={title} loading="lazy"></iframe>
+  </div>
+</figure>
+
+<style>
+  .pdf-viewer {
+    margin: 2rem 0;
+    border-radius: 14px;
+    border: 1px solid rgba(86, 95, 137, 0.5);
+    background: var(--tokyo-surface-2, #1f2335);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+  }
+
+  .pdf-head {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.9rem 1rem;
+  }
+
+  .pdf-icon {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 10px;
+    background: rgba(247, 118, 142, 0.12);
+    color: #f7768e;
+  }
+
+  .pdf-caption {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+    line-height: 1.3;
+  }
+
+  .pdf-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--tokyo-contrast, #c0caf5);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pdf-meta {
+    font-size: 0.78rem;
+    color: rgba(169, 177, 214, 0.75);
+  }
+
+  .pdf-actions {
+    display: flex;
+    flex: none;
+    gap: 0.5rem;
+  }
+
+  .pdf-btn {
+    padding: 0.45rem 0.9rem;
+    border-radius: 0.6rem;
+    border: 1px solid rgba(122, 162, 247, 0.4);
+    color: #7aa2f7;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 150ms ease;
+  }
+
+  .pdf-btn:hover {
+    background: rgba(122, 162, 247, 0.12);
+  }
+
+  .pdf-btn-primary {
+    background: #7aa2f7;
+    border-color: transparent;
+    color: #1a1b26;
+  }
+
+  .pdf-btn-primary:hover {
+    background: #89b4fa;
+  }
+
+  .pdf-frame {
+    border-top: 1px solid rgba(86, 95, 137, 0.5);
+    background: #16161e;
+  }
+
+  .pdf-frame iframe {
+    display: block;
+    width: 100%;
+    height: min(900px, 80vh);
+    border: 0;
+  }
+
+  /* Mobile browsers mostly can't show a PDF inline; the buttons cover it. */
+  @media (max-width: 767px) {
+    .pdf-frame {
+      display: none;
+    }
+
+    .pdf-head {
+      flex-wrap: wrap;
+    }
+
+    .pdf-actions {
+      width: 100%;
+    }
+
+    .pdf-btn {
+      flex: 1;
+      text-align: center;
+    }
+  }
+
+  :global(html.light) .pdf-viewer {
+    border-color: rgba(42, 91, 184, 0.2);
+    background: rgba(255, 255, 255, 0.75);
+    box-shadow: 0 14px 36px rgba(52, 59, 88, 0.12);
+  }
+
+  :global(html.light) .pdf-icon {
+    background: rgba(196, 49, 75, 0.1);
+    color: #c4314b;
+  }
+
+  :global(html.light) .pdf-meta {
+    color: rgba(59, 66, 97, 0.7);
+  }
+
+  :global(html.light) .pdf-btn {
+    border-color: rgba(42, 91, 184, 0.35);
+    color: #2a5bb8;
+  }
+
+  :global(html.light) .pdf-btn-primary {
+    background: #2a5bb8;
+    color: #fff;
+  }
+
+  :global(html.light) .pdf-frame {
+    border-color: rgba(42, 91, 184, 0.15);
+    background: #e9e9ed;
+  }
+</style>

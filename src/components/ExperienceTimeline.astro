@@ -20,15 +20,7 @@ const { experiences } = Astro.props;
     const side = index % 2 === 0 ? 'left' : 'right';
     return (
       <article class={`item ${side}`} data-stagger-item>
-        {/* <div class="dot" aria-hidden="true">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-blue-400">
-            <path
-              fill-rule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-              clip-rule="evenodd"
-            />
-          </svg>
-        </div> */}
+        <span class="dot" aria-hidden="true"></span>
 
         <div class="card">
           <time class="font-mono italic text-sm text-gray-400">{exp.period}</time>
@@ -99,24 +91,20 @@ const { experiences } = Astro.props;
     z-index: 1;
   }
 
+  /* Marks each entry on the line; only on phones, where the line runs beside
+     the cards instead of behind them. */
   .dot {
+    display: none;
     position: absolute;
-    top: 0.4rem;
-    transform: translate(-50%, 0);
-    width: 2.5rem;
-    height: 2.5rem;
-    background: var(--tokyo-surface-2, #1f2335);
+    top: 1.35rem;
+    width: 0.8rem;
+    height: 0.8rem;
     border-radius: 9999px;
-    border: 4px solid var(--tokyo-blue, #7aa2f7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 10px 25px rgba(122, 162, 247, 0.35);
+    background: var(--tokyo-surface-2, #1f2335);
+    border: 2px solid var(--tokyo-blue, #7aa2f7);
+    box-shadow: 0 0 10px rgba(122, 162, 247, 0.45);
     z-index: 2;
   }
-
-  .item.left .dot { left: var(--line-left); }
-  .item.right .dot { left: var(--line-right); }
 
   @media (max-width: 767px) {
     .timeline {
@@ -124,15 +112,18 @@ const { experiences } = Astro.props;
       --line-right: 0.5rem;
       padding-left: 0.75rem;
     }
-    .item,
+    .item.left,
     .item.right {
       align-self: stretch;
-      padding-left: 2.75rem;
+      padding-left: 1.75rem;
       padding-right: 0.5rem;
       text-align: left;
     }
     .dot {
-      transform: translate(0, 0);
+      display: block;
+      /* The line sits 0.5rem into the timeline, items start 0.75rem in. */
+      left: calc(-0.25rem + 1px);
+      transform: translateX(-50%);
     }
   }
 </style>
