@@ -1029,6 +1029,8 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
     font-weight: 800;
     line-height: 1;
     font-style: italic;
+    /* Room for the italic overhang: background-clip: text only paints inside the box. */
+    padding: 0.04em 0.14em 0.04em 0.06em;
     color: rgba(147, 197, 253, 0.95);
     text-shadow: 0 0 24px rgba(125, 207, 255, 0.5);
   }
