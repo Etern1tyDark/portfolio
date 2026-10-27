@@ -1,0 +1,112 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import EllipticCurveLab from '../components/lab/EllipticCurveLab.astro';
+import CyclicGroupLab from '../components/lab/CyclicGroupLab.astro';
+import LatticeLab from '../components/lab/LatticeLab.astro';
+import '../styles/lab.css';
+import { withBasePath } from '../utils/withBasePath';
+
+const site = Astro.site ?? new URL('https://etern1ty.site');
+const description = 'Interactive visualizers for the math behind cryptography: elliptic curves, cyclic groups, and lattices.';
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  url: new URL(withBasePath('/lab'), site).href,
+  name: 'Lab | Nathan Kho Pancras (eter) | Portfolio',
+  description,
+};
+
+const upcoming = [
+  { title: 'RSA, step by step', text: 'Key generation, encryption and why small exponents or shared primes break it.' },
+  { title: 'AES rounds', text: 'SubBytes, ShiftRows, MixColumns and AddRoundKey on a real 16-byte state.' },
+];
+---
+
+<Layout title="Lab | Nathan Kho Pancras (eter) | Portfolio" description={description} canonicalPath="/lab" jsonLd={jsonLd}>
+  <Navbar currentPath="/lab" />
+  <main class="min-h-screen">
+    <section class="hero min-h-[38vh] hero-tones">
+      <div class="hero-content text-center px-4">
+        <div class="max-w-2xl mx-auto">
+          <p class="lab-eyebrow">Crypto Lab</p>
+          <h1 class="text-5xl font-bold text-blue-400 mb-4 hero-title">Lab</h1>
+          <p class="text-lg text-gray-300 hero-subtitle">
+            Interactive toys for the math behind the crypto I play with. Click around, everything runs in your browser.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 py-14">
+      <div class="max-w-6xl mx-auto space-y-10">
+        <div class="reveal-up">
+          <EllipticCurveLab />
+        </div>
+
+        <!-- <p class="lab-footnote reveal-up">
+          The same group law runs ECDSA in my <a href="https://github.com/NathanKhoP/ECC-Signer" target="_blank" rel="noopener noreferrer">ECC-Signer</a>,
+          just over a 256-bit prime instead of 17.
+        </p> -->
+
+        <div class="reveal-up">
+          <CyclicGroupLab />
+        </div>
+
+        <div class="reveal-up">
+          <LatticeLab />
+        </div>
+
+        <!-- <div>
+          <h2 class="text-2xl font-bold text-gray-400 mb-4 reveal-up">Coming next</h2>
+          <div class="lab-upcoming" data-stagger-group>
+            {upcoming.map((item) => (
+              <article class="card p-5" data-stagger-item>
+                <h3 class="font-bold text-blue-400">{item.title}</h3>
+                <p class="text-sm text-gray-400 mt-1 leading-relaxed">{item.text}</p>
+              </article>
+            ))}
+          </div>
+        </div> -->
+      </div>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .lab-eyebrow {
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    color: rgba(192, 202, 245, 0.7);
+    margin-bottom: 0.5rem;
+  }
+
+  :global(html.light) .lab-eyebrow {
+    color: rgba(59, 66, 97, 0.7);
+  }
+
+  .lab-footnote {
+    text-align: center;
+    font-size: 0.9rem;
+    color: rgba(169, 177, 214, 0.8);
+  }
+
+  .lab-footnote a {
+    color: #7aa2f7;
+  }
+
+  :global(html.light) .lab-footnote {
+    color: rgba(59, 66, 97, 0.8);
+  }
+
+  :global(html.light) .lab-footnote a {
+    color: #2a5bb8;
+  }
+
+  .lab-upcoming {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+</style>

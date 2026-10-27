@@ -1,0 +1,212 @@
+/* Shared layout for the Lab's visualizer cards (CyclicGroupLab, LatticeLab). */
+.lab-card {
+  --lab-surface: var(--tokyo-surface-2, #1f2335);
+  --lab-border: rgba(86, 95, 137, 0.55);
+  --lab-text: #c0caf5;
+  --lab-muted: rgba(169, 177, 214, 0.75);
+  --lab-grid: rgba(86, 95, 137, 0.45);
+  --lab-point: #7dcfff;
+  --lab-accent: #7aa2f7;
+
+  border-radius: 16px;
+  border: 1px solid var(--lab-border);
+  background: linear-gradient(140deg, rgba(36, 40, 59, 0.96), rgba(20, 24, 37, 0.94));
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.4);
+  padding: clamp(1.1rem, 3vw, 2rem);
+  color: var(--lab-text);
+}
+
+html.light .lab-card {
+  --lab-surface: #ffffff;
+  --lab-border: rgba(42, 91, 184, 0.2);
+  --lab-text: #2f3550;
+  --lab-muted: rgba(59, 66, 97, 0.75);
+  --lab-grid: rgba(52, 59, 88, 0.2);
+  --lab-point: #007197;
+  --lab-accent: #2a5bb8;
+
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.92), rgba(236, 238, 245, 0.95));
+  box-shadow: 0 18px 45px rgba(52, 59, 88, 0.12);
+}
+
+.lab-card-eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--lab-muted);
+}
+
+.lab-card-title {
+  margin-top: 0.3rem;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  color: var(--lab-accent);
+}
+
+.lab-card-intro {
+  margin-top: 0.6rem;
+  max-width: 68ch;
+  line-height: 1.65;
+  color: var(--lab-muted);
+}
+
+.lab-card-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: clamp(1rem, 3vw, 2rem);
+  margin-top: 1.5rem;
+  align-items: start;
+}
+
+.lab-plot-wrap {
+  position: sticky;
+  top: calc(4.5rem + env(safe-area-inset-top, 0px));
+}
+
+.lab-plot {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  border: 1px solid var(--lab-border);
+  background: var(--lab-surface);
+  touch-action: manipulation;
+  cursor: crosshair;
+  user-select: none;
+}
+
+.lab-hint {
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  text-align: center;
+  color: var(--lab-muted);
+}
+
+.lab-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.lab-params {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.lab-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--lab-muted);
+}
+
+.lab-field select,
+.lab-field input[type="number"] {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--lab-border);
+  background: var(--lab-surface);
+  color: var(--lab-text);
+  font-family: "Fira Code", monospace;
+  font-size: 0.85rem;
+}
+
+.lab-field input[type="range"] {
+  accent-color: var(--lab-accent);
+}
+
+.lab-k-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.8rem;
+}
+
+.lab-k {
+  flex: 1;
+}
+
+.lab-button {
+  padding: 0.4rem 1rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--lab-border);
+  color: var(--lab-accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.lab-button:hover {
+  background: rgba(122, 162, 247, 0.12);
+}
+
+.lab-button[hidden] {
+  display: none;
+}
+
+.lab-tabs {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 0.2rem;
+  border-radius: 999px;
+  border: 1px solid var(--lab-border);
+}
+
+.lab-tabs button {
+  padding: 0.35rem 1rem;
+  border-radius: 999px;
+  font-family: "Fira Code", monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--lab-muted);
+}
+
+.lab-tabs button[aria-selected="true"] {
+  background: rgba(122, 162, 247, 0.18);
+  color: var(--lab-accent);
+}
+
+.lab-readout {
+  font-family: "Fira Code", monospace;
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+
+.lab-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.3rem 0.9rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.7rem;
+  border: 1px solid var(--lab-border);
+  background: rgba(122, 162, 247, 0.05);
+  font-size: 0.82rem;
+}
+
+.lab-facts dt {
+  color: var(--lab-muted);
+}
+
+.lab-facts dd {
+  margin: 0;
+  font-family: "Fira Code", monospace;
+}
+
+.lab-note {
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--lab-muted);
+}
+
+@media (max-width: 860px) {
+  .lab-card-body {
+    grid-template-columns: 1fr;
+  }
+
+  .lab-plot-wrap {
+    position: static;
+  }
+}

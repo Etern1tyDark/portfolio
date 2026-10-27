@@ -1,6 +1,7 @@
 ---
 import { withBasePath } from '../utils/withBasePath';
 import music from '../data/music.json';
+import { parseSimai } from '../utils/simai';
 
 const titleVariants = [
   "Hello!",
@@ -12,7 +13,38 @@ const titleVariants = [
 
 const lanePhrases = titleVariants;
 const rhythmInputKey = "F";
-const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
+// Second key once hard mode is unlocked, for alternating on streams.
+const altInputKey = "J";
+
+// Hard-mode charts: 1K simai in src/data/charts/<name>.txt (format in
+// scripts/simai-to-1k.py). Notes closer than this can't be told apart on one lane.
+const CHART_MIN_GAP_MS = 30;
+const chartFiles = import.meta.glob<string>('../data/charts/*.txt', { eager: true, query: '?raw', import: 'default' });
+const rhythmTracks = Object.fromEntries(
+  Object.entries(music.tracks).map(([id, t]) => {
+    const text = chartFiles[`../data/charts/${t.chart}.txt`];
+    const chart = text ? parseSimai(text, CHART_MIN_GAP_MS) : null;
+    return [
+      id,
+      {
+        title: t.title,
+        offsetMs: t.offsetMs,
+        timingPoints: t.timingPoints,
+        // The round ends at the chart's E (or the end of the audio, if sooner).
+        chart: chart
+          ? {
+              notes: chart.notes,
+              big: chart.big.map((b) => (b ? 1 : 0)),
+              endMs: Math.min(chart.endMs, t.durationMs - 100),
+              durationMs: t.durationMs,
+            }
+          : null,
+      },
+    ];
+  }),
+);
+const { normalTrack, hardTracks } = music;
+const hardSongs = hardTracks.map((id) => ({ id, title: music.tracks[id as keyof typeof music.tracks].title }));
 ---
 
 <section class="hero min-h-screen hero-tones relative overflow-hidden">
@@ -32,10 +64,31 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         </div>
       </h1>
       <div class="hero-rhythm-controls-wrapper">
-        <p class="hero-rhythm-hint hidden md:block">Press <kbd>{rhythmInputKey}</kbd> to the notes!</p>
+        <p class="hero-rhythm-hint hidden md:block">
+          Press <kbd>{rhythmInputKey}</kbd><span data-alt-key hidden> or <kbd>{altInputKey}</kbd></span> to the notes!
+        </p>
         <button id="mobile-rhythm-btn" class="hero-rhythm-tap-btn md:hidden">
           TAP TO THE NOTES!
         </button>
+        <div class="rhythm-mode-row">
+          <div class="rhythm-mode" data-rhythm-mode data-unlocked-only role="group" aria-label="Rhythm game difficulty" hidden>
+            <button type="button" data-mode="normal" aria-pressed="true">NORMAL</button>
+            <button type="button" data-mode="hard" aria-pressed="false">HARD</button>
+          </div>
+          <button type="button" class="rhythm-restart" data-rhythm-restart data-unlocked-only title="Restart the song" hidden>
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+            RESTART
+          </button>
+          <button type="button" class="rhythm-restart" data-rhythm-options-open title="Scroll speed and offset">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+            OPTIONS
+          </button>
+        </div>
+        <div class="rhythm-songs" data-rhythm-songs role="group" aria-label="Hard mode song" hidden>
+          {hardSongs.map((song) => (
+            <button type="button" data-song={song.id} aria-pressed="false">{song.title}</button>
+          ))}
+        </div>
       </div>
       <p id="rhythm-judgement" class="hero-rhythm-judge" aria-live="polite"></p>
       <p class="text-base md:text-lg text-gray-200 hero-subtitle max-w-xl mx-auto leading-relaxed">
@@ -56,7 +109,7 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
 
   <dialog id="rhythm-results" class="rhythm-results" aria-labelledby="rhythm-results-title">
     <div class="rr-card">
-      <p class="rr-eyebrow">RESULT</p>
+      <p class="rr-eyebrow" data-rr="eyebrow">RESULT</p>
       <div class="rr-rank-row">
         <span class="rr-rank" data-rr="rank">S</span>
         <span class="rr-badge" data-rr="badge" hidden></span>
@@ -79,12 +132,44 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         <button type="button" class="rr-step" data-rr-offset="5" aria-label="Notes 5ms later">+</button>
         <button type="button" class="rr-auto" data-rr-offset="auto" data-rr="auto">Match avg</button>
       </div>
+      <div class="rr-unlock" data-rr-unlock hidden>
+        <p class="rr-unlock-title">HARD MODE UNLOCKED</p>
+        <p class="rr-unlock-text">
+          Real charts for {hardSongs.map((song, i) => <>{i > 0 && (i === hardSongs.length - 1 ? ' and ' : ', ')}<strong>{song.title}</strong></>)},
+          and <kbd>{rhythmInputKey}</kbd> + <kbd>{altInputKey}</kbd> to alternate. Switch anytime below the lane.
+        </p>
+        <button type="button" class="rr-unlock-btn" data-rr-mode="hard">Play hard mode</button>
+      </div>
       <button type="button" class="rr-retry btn btn-primary" data-rr-close autofocus>Play again</button>
+    </div>
+  </dialog>
+
+  <dialog id="rhythm-options" class="rhythm-results" aria-labelledby="rhythm-options-title">
+    <div class="rr-card ro-card">
+      <h2 id="rhythm-options-title" class="rr-eyebrow">OPTIONS</h2>
+      <label class="ro-field">
+        <span class="ro-label">Scroll speed <output data-ro="speed-value">1.0×</output></span>
+        <input type="range" min="0.5" max="3" step="0.1" value="1" data-ro="speed" />
+      </label>
+      <p class="ro-help">Faster spreads dense streams out so notes don't overlap.</p>
+      <div class="ro-field">
+        <span class="ro-label">Audio offset</span>
+        <div class="ro-stepper">
+          <button type="button" class="rr-step" data-ro-offset="-5" aria-label="Notes 5ms earlier">−</button>
+          <output class="rr-calibrate-value" data-ro="offset-value">±0ms</output>
+          <button type="button" class="rr-step" data-ro-offset="5" aria-label="Notes 5ms later">+</button>
+        </div>
+      </div>
+      <p class="ro-help">Raise it if notes reach the line before you hear the beat. Both are saved on this device.</p>
+      <div class="ro-actions">
+        <button type="button" class="rr-auto" data-ro-reset>Reset</button>
+        <button type="button" class="btn btn-primary ro-done" data-ro-close>Done</button>
+      </div>
     </div>
   </dialog>
 </section>
 
-<script define:vars={{ rhythmInputKey, lanePhrases, timing }} is:inline>
+<script define:vars={{ rhythmInputKey, altInputKey, lanePhrases, rhythmTracks, normalTrack, hardTracks }} is:inline>
   (() => {
     // Hit windows (ms either side of the beat), tightest first.
     const JUDGEMENTS = [
@@ -95,16 +180,27 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
     ];
     const MISS_MS = JUDGEMENTS[JUDGEMENTS.length - 1].ms;
 
-    // How long a note takes to cross the whole lane.
-    const LANE_CROSS_MS = 5600;
-    const LANE_CROSS_MS_MOBILE = 4600;
+    // Per difficulty: how long a note takes to cross the whole lane, and how
+    // many notes make a round (the results screen shows after that many).
+    const MODES = {
+      normal: { laneCrossMs: 5600, laneCrossMsMobile: 4600, roundNotes: 10 },
+      hard: { laneCrossMs: 3400, laneCrossMsMobile: 2400, roundNotes: 32 },
+    };
     const NOTE_GAP_PX = 120;
     const MIN_NOTE_INTERVAL_MS = 1850;
     // The first note starts part-way across so the lane isn't empty on load.
     const FIRST_NOTE_LEAD_MS = 1600;
     const NOTE_FADE_IN_MS = 280;
-    // Notes land on bar lines (every `meter` beats), or every 2nd beat if unset.
+    // Big notes: the second key must follow the first within this.
+    const BIG_PAIR_MS = 60;
+    // Normal notes land on bar lines (every `meter` beats, or 2 if unset).
     const BEAT_STEP = 2;
+    // Hard mode is a 1K chart on a half-beat grid: one rhythm pattern per bar
+    // ("x" = note), picked deterministically so a song always plays the same.
+    const HARD_PATTERNS = {
+      3: ["x.x.x.", "x.x.xx", "x.xxx.", "xx.x.x", "x.x.x.", "xxx.x.", "x..xx.", "x.x..."],
+      4: ["x.x.x.x.", "x.x.xxx.", "xx.x.x.x", "x.xx.x..", "x.x.x.x.", "xxx.x.x.", "x..xx.x.", "x.x.x..."],
+    };
     // audio.currentTime is coarse and jittery (badly so in Firefox: it can sit
     // still for a frame, then jump ~250ms), so the song clock runs on
     // performance.now() and is only nudged toward it by a fraction of the error
@@ -112,8 +208,8 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
     const CLOCK_SLEW = 0.04;
     const CLOCK_SNAP_MS = 300;
 
-    // Results screen: a round starts on the first hit and ends after this many notes.
-    const ROUND_NOTES = 10;
+    // Results screen: a round starts on the first hit and ends after
+    // MODES[mode].roundNotes notes.
     // Give up on a round quietly if the player walked away mid-way.
     const ABANDON_MISS_STREAK = 4;
     const ABANDON_IDLE_MS = 6000;
@@ -122,6 +218,24 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
     // between devices, e.g. phones and Bluetooth headphones).
     const USER_OFFSET_KEY = "rhythm-offset";
     const USER_OFFSET_LIMIT_MS = 300;
+    // Scroll speed multiplier from the options menu.
+    const SPEED_KEY = "rhythm-speed";
+    const SPEED_MIN = 0.5;
+    const SPEED_MAX = 3;
+
+    const readSpeed = () => {
+      let value = 1;
+      try {
+        value = Number(localStorage.getItem(SPEED_KEY)) || 1;
+      } catch {}
+      return Math.max(SPEED_MIN, Math.min(SPEED_MAX, value));
+    };
+
+    const writeSpeed = (value) => {
+      try {
+        localStorage.setItem(SPEED_KEY, String(value));
+      } catch {}
+    };
 
     const readUserOffset = () => {
       try {
@@ -140,6 +254,40 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
     };
 
     const formatMs = (ms) => (ms === 0 ? "±0ms" : `${ms > 0 ? "+" : ""}${ms}ms`);
+
+    // Hard mode unlocks on an ALL PERFECT round; both are remembered per device.
+    // The music player reads the same keys to pick its track.
+    const UNLOCK_KEY = "rhythm-unlocked";
+    const MODE_KEY = "rhythm-mode";
+
+    const readStore = (key) => {
+      try {
+        return localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    };
+
+    const writeStore = (key, value) => {
+      try {
+        localStorage.setItem(key, value);
+      } catch {}
+    };
+
+    const SONG_KEY = "rhythm-song";
+
+    const isUnlocked = () => readStore(UNLOCK_KEY) === "1";
+    const currentMode = () => (isUnlocked() && readStore(MODE_KEY) === "hard" ? "hard" : "normal");
+    // The hard-mode song, defaulting to the first one that isn't the normal song.
+    const currentSong = () => {
+      const stored = readStore(SONG_KEY);
+      return hardTracks.includes(stored) ? stored : (hardTracks.find((id) => id !== normalTrack) ?? hardTracks[0]);
+    };
+    const trackFor = (mode) => (mode === "hard" && hardTracks.length ? currentSong() : normalTrack);
+    const setMode = (mode) => {
+      writeStore(MODE_KEY, mode);
+      window.dispatchEvent(new CustomEvent("rhythm-mode", { detail: mode }));
+    };
 
     // Keep the active lane's cleanup on window so a lane is never mounted twice.
     const CLEANUP_KEY = "__rhythmLaneCleanup";
@@ -182,34 +330,133 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
       return note;
     };
 
-    const timingPoints = [...timing.timingPoints].sort((a, b) => a.timeMs - b.timeMs);
+    const buildTapNote = (big) => {
+      const note = document.createElement("span");
+      note.className = "rhythm-note is-tap";
+      const dot = document.createElement("span");
+      dot.className = big ? "hard-note is-big" : "hard-note";
+      note.appendChild(dot);
+      return note;
+    };
 
-    // First bar line at or after `t` (ms into the song) within each tempo section. Returns Infinity past the last beat before `end`.
-    const beatAtOrAfter = (t, points, end) => {
+    const timings = Object.fromEntries(
+      Object.entries(rhythmTracks).map(([id, t]) => [
+        id,
+        {
+          title: t.title,
+          offsetMs: t.offsetMs,
+          points: [...t.timingPoints].sort((a, b) => a.timeMs - b.timeMs),
+          chart: t.chart,
+        },
+      ]),
+    );
+    const timingFor = (trackId) => timings[trackId] ?? timings[normalTrack];
+
+    // First note of a song's chart at or after `t` (song ms), before `end`.
+    const chartNoteAtOrAfter = (notes, t, end) => {
+      let lo = 0;
+      let hi = notes.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (notes[mid] < t - 0.5) lo = mid + 1;
+        else hi = mid;
+      }
+      return lo < notes.length && notes[lo] < end ? notes[lo] : Infinity;
+    };
+
+    // Is the chart note at song-local time `local` a big one?
+    const chartBigAt = (chart, local) => {
+      const i = Math.min(chart.notes.length - 1, Math.max(0, chartNoteIndexNear(chart.notes, local)));
+      return Math.abs(chart.notes[i] - local) < 1 && chart.big[i] === 1;
+    };
+    const chartNoteIndexNear = (notes, t) => {
+      let lo = 0;
+      let hi = notes.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (notes[mid] < t - 0.5) lo = mid + 1;
+        else hi = mid;
+      }
+      return lo;
+    };
+
+    // Map a chart time that keeps growing across song loops into one loop of
+    // `length` ms (shifted by the song offset), find a note there, and map back.
+    const loopedNoteAtOrAfter = (t, length, shift, find) => {
+      if (!Number.isFinite(length)) return find(t + shift, Infinity) - shift;
+      const shifted = t + shift;
+      const loop = Math.floor(shifted / length);
+      let note = find(shifted - loop * length, length);
+      let base = loop * length;
+      if (note === Infinity) {
+        base += length;
+        note = find(0, length);
+      }
+      return base + note - shift;
+    };
+
+    // Grids for songs without a chart file: which slots of a tempo section hold
+    // notes, per difficulty.
+    const CHARTS = {
+      normal: { stepBeats: (meter) => meter, has: () => true },
+      hard: {
+        stepBeats: () => 0.5,
+        has(k, meter, section) {
+          const slots = meter * 2;
+          const patterns = HARD_PATTERNS[meter];
+          if (!patterns) return k % 2 === 0;
+          const bar = Math.floor(k / slots) + section * 31;
+          return patterns[(bar * 5 + Math.floor(bar / 4)) % patterns.length][k % slots] === "x";
+        },
+      },
+    };
+
+    // First chart note at or after `t` (ms into the song), walking each tempo
+    // section's grid. Returns Infinity past the last note before `end`.
+    const noteAtOrAfter = (t, points, end, chart) => {
       for (let i = 0; i < points.length; i += 1) {
         const sectionStart = points[i].timeMs;
         const sectionEnd = Math.min(points[i + 1]?.timeMs ?? Infinity, end);
         if (t >= sectionEnd) continue;
-        const step = (60000 / points[i].bpm) * (points[i].meter ?? BEAT_STEP);
-        const k = Math.max(0, Math.ceil((t - sectionStart - 0.5) / step));
-        const beat = sectionStart + k * step;
-        if (beat < sectionEnd) return beat;
+        const meter = points[i].meter ?? BEAT_STEP;
+        const step = (60000 / points[i].bpm) * chart.stepBeats(meter);
+        for (let k = Math.max(0, Math.ceil((t - sectionStart - 0.5) / step)); ; k += 1) {
+          const time = sectionStart + k * step;
+          if (time >= sectionEnd) break;
+          if (chart.has(k, meter, i)) return time;
+        }
       }
       return Infinity;
     };
 
     // Song clock. While the track plays, chart time follows audio.currentTime
-    // (smoothed, see CLOCK_SLEW) and counts loops; otherwise it free-runs at the
-    // first section's tempo.
-    const createClock = (audio) => {
+    // (smoothed, see CLOCK_SLEW) and counts loops; otherwise it free-runs (the
+    // hard chart from its start, or the first section's tempo grid).
+    const createClock = (audio, mode) => {
+      const grid = CHARTS[mode];
       const playing = !!audio && !audio.paused && audio.readyState >= 2 && audio.duration > 0;
+      const timing = timingFor(playing ? audio.dataset.track : trackFor(mode));
+      const chartNotes = mode === "hard" ? timing.chart?.notes : null;
+
       if (!playing) {
+        const first = timing.points[0];
         const origin = performance.now();
         return {
           synced: false,
+          track: trackFor(mode),
+          wholeSong: !!chartNotes,
+          // Chart time of the E marker in the pass through the song containing t.
+          endOf: (t) => {
+            const length = timing.chart.durationMs;
+            return Math.floor(t / length) * length + timing.chart.endMs;
+          },
+          loopLength: chartNotes ? timing.chart.durationMs : Infinity,
           at: (perfNow) => perfNow - origin,
           sync: () => {},
-          beatAtOrAfter: (t) => beatAtOrAfter(t, [{ ...timingPoints[0], timeMs: 0 }], Infinity),
+          isBig: (t) => !!chartNotes && chartBigAt(timing.chart, ((t % timing.chart.durationMs) + timing.chart.durationMs) % timing.chart.durationMs),
+          noteAtOrAfter: chartNotes
+            ? (t) => loopedNoteAtOrAfter(t, timing.chart.durationMs, 0, (local, end) => chartNoteAtOrAfter(chartNotes, local, end))
+            : (t) => noteAtOrAfter(t, [{ ...first, timeMs: 0 }], Infinity, grid),
         };
       }
 
@@ -223,6 +470,12 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
 
       return {
         synced: true,
+        track: audio.dataset.track,
+        // Hard charts run for the whole song: the round ends at the chart's E.
+        wholeSong: !!chartNotes,
+        endOf: (t) => Math.floor((t + offsetMs) / duration) * duration + timing.chart.endMs - offsetMs,
+        isBig: (t) => !!chartNotes && chartBigAt(timing.chart, (((t + offsetMs) % duration) + duration) % duration),
+        loopLength: duration,
         at: (perfNow) => baseChart + (perfNow - basePerf) * audio.playbackRate,
         sync(perfNow) {
           const raw = audio.currentTime * 1000;
@@ -238,19 +491,10 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
             baseChart += error * CLOCK_SLEW;
           }
         },
-        beatAtOrAfter(t) {
-          // Chart time keeps growing across loops; map into the current loop.
-          const shifted = t + offsetMs;
-          const loop = Math.floor(shifted / duration);
-          const local = shifted - loop * duration;
-          let beat = beatAtOrAfter(local, timingPoints, duration);
-          let base = loop * duration;
-          if (beat === Infinity) {
-            base += duration;
-            beat = beatAtOrAfter(0, timingPoints, duration);
-          }
-          return base + beat - offsetMs;
-        },
+        noteAtOrAfter: (t) =>
+          loopedNoteAtOrAfter(t, duration, offsetMs, (local, end) =>
+            chartNotes ? chartNoteAtOrAfter(chartNotes, local, end) : noteAtOrAfter(local, timing.points, end, grid),
+          ),
       };
     };
 
@@ -263,9 +507,15 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
       if (!lane || !stream || !judgementLine || !judgementLabel) return () => {};
       const audio = document.querySelector("[data-music-player] audio");
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const modeToggle = document.querySelector("[data-rhythm-mode]");
+      const unlockedOnly = Array.from(document.querySelectorAll("[data-unlocked-only]"));
+      const optionsDialog = document.getElementById("rhythm-options");
+      const isOptionsOpen = () => !!optionsDialog?.open;
+      const songPicker = document.querySelector("[data-rhythm-songs]");
+      const altKeyHint = document.querySelector("[data-alt-key]");
       const isResultsOpen = () => !!resultsDialog?.open;
       const isPageActive = () =>
-        document.visibilityState === "visible" && document.hasFocus() && !isResultsOpen();
+        document.visibilityState === "visible" && document.hasFocus() && !isResultsOpen() && !isOptionsOpen();
 
       let laneWidth = 0;
       let judgementX = 0;
@@ -274,7 +524,8 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
       let rafId = 0;
       let clearHitTimer = 0;
       let clearJudgeTimer = 0;
-      let clock = createClock(null);
+      let mode = currentMode();
+      let clock = createClock(null, mode);
       let lastChartTime = -Infinity;
       // Built and measured ahead of time; enters the lane when its lead time comes.
       let nextNote = null;
@@ -292,10 +543,35 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         missStreak: 0,
         offsetSum: 0,
         synced: clock.synced,
+        mode,
+        track: clock.track,
+        wholeSong: clock.wholeSong,
+        // Started after this pass's E (in the outro)? Then it runs to the next one.
+        endAt: clock.wholeSong
+          ? clock.endOf(lastChartTime) + (clock.endOf(lastChartTime) <= lastChartTime ? clock.loopLength : 0)
+          : Infinity,
       });
 
       const judgedCount = () =>
         round ? round.miss + Object.values(round.counts).reduce((sum, n) => sum + n, 0) : 0;
+
+      const renderModeToggle = () => {
+        const unlocked = isUnlocked();
+        const hard = currentMode() === "hard";
+        if (altKeyHint) altKeyHint.hidden = !unlocked;
+        for (const el of unlockedOnly) el.hidden = !unlocked;
+        if (modeToggle) {
+          for (const button of modeToggle.querySelectorAll("[data-mode]")) {
+            button.setAttribute("aria-pressed", String(button.dataset.mode === currentMode()));
+          }
+        }
+        if (songPicker) {
+          songPicker.hidden = !hard;
+          for (const button of songPicker.querySelectorAll("[data-song]")) {
+            button.setAttribute("aria-pressed", String(button.dataset.song === currentSong()));
+          }
+        }
+      };
 
       const registerHit = (name, offsetMs) => {
         if (!round) round = startRound();
@@ -327,6 +603,7 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
       };
 
       let lastAvgOffset = 0;
+      let lastRoundWholeSong = false;
 
       const renderUserOffset = () => {
         const value = resultsDialog.querySelector('[data-rr="user-offset"]');
@@ -360,6 +637,17 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         const accuracy = JUDGEMENTS.reduce((sum, j) => sum + r.counts[j.name] * j.weight, 0) / total;
         const avgOffset = hits ? Math.round(r.offsetSum / hits) : 0;
 
+        set("eyebrow", r.mode === "hard" ? `RESULT · HARD · ${timingFor(r.track).title}` : "RESULT");
+
+        const allPerfect = r.counts.CRITICAL + r.counts.PERFECT === total;
+        const unlockedNow = allPerfect && !isUnlocked();
+        if (unlockedNow) {
+          writeStore(UNLOCK_KEY, "1");
+          renderModeToggle();
+        }
+        const unlockBanner = resultsDialog.querySelector("[data-rr-unlock]");
+        if (unlockBanner) unlockBanner.hidden = !unlockedNow;
+
         const rank = rankFor(accuracy);
         const rankEl = resultsDialog.querySelector('[data-rr="rank"]');
         if (rankEl) rankEl.dataset.rank = rank;
@@ -382,7 +670,7 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         if (badge) {
           const label =
             r.counts.CRITICAL === total ? "ALL CRITICAL"
-            : r.counts.CRITICAL + r.counts.PERFECT === total ? "ALL PERFECT"
+            : allPerfect ? "ALL PERFECT"
             : r.miss === 0 ? "FULL COMBO"
             : "";
           badge.textContent = label;
@@ -392,9 +680,14 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
 
       // Returns true when the results screen took over (and stopped the lane).
       const maybeFinishRound = () => {
-        if (!round || judgedCount() < ROUND_NOTES) return false;
+        if (!round) return false;
+        const done = round.wholeSong
+          ? lastChartTime >= round.endAt + MISS_MS
+          : judgedCount() >= MODES[round.mode].roundNotes;
+        if (!done || judgedCount() === 0) return false;
         const finished = round;
         round = null;
+        lastRoundWholeSong = finished.wholeSong;
 
         const rect = lane.getBoundingClientRect();
         const onScreen = rect.bottom > 0 && rect.top < window.innerHeight;
@@ -407,6 +700,10 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
       };
 
       const clearLane = () => {
+        if (pendingBig) {
+          window.clearTimeout(pendingBig.timer);
+          pendingBig = null;
+        }
         window.cancelAnimationFrame(rafId);
         rafId = 0;
         notes.length = 0;
@@ -419,20 +716,22 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         laneWidth = laneRect.width;
         const judgementRect = judgementLine.getBoundingClientRect();
         judgementX = judgementRect.left - laneRect.left + judgementRect.width * 0.5;
-        speedPxPerMs = laneWidth / (window.innerWidth < 768 ? LANE_CROSS_MS_MOBILE : LANE_CROSS_MS);
+        const config = MODES[mode];
+        const crossMs = window.innerWidth < 768 ? config.laneCrossMsMobile : config.laneCrossMs;
+        speedPxPerMs = (laneWidth / crossMs) * readSpeed();
       };
 
       const renderNote = (note, x, fadeIn) => {
         note.x = x;
         const center = x + note.width * 0.5;
-        const rightFadeStart = laneWidth - 180;
-        const leftFadeEnd = 180;
+        // Narrow (phone) lanes get shorter fades so notes are solid at the line.
+        const fade = Math.min(180, laneWidth * 0.22);
 
         let opacity = 1;
-        if (center > rightFadeStart) {
-          opacity = Math.max(0, (laneWidth - center) / 180);
-        } else if (center < leftFadeEnd) {
-          opacity = Math.max(0, center / 180);
+        if (center > laneWidth - fade) {
+          opacity = Math.max(0, (laneWidth - center) / fade);
+        } else if (center < fade) {
+          opacity = Math.max(0, center / fade);
         }
 
         note.el.style.opacity = String(opacity * fadeIn);
@@ -444,9 +743,9 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
       // Time before its beat at which a note must appear at the lane's right edge.
       const leadMs = (width) => (laneWidth + 72 - judgementX + width * 0.5) / speedPxPerMs;
 
-      const showJudgement = (name, offsetMs) => {
+      const showJudgement = (name, offsetMs, prefix = "") => {
         const signed = offsetMs > 0 ? "+" + offsetMs : String(offsetMs);
-        judgementLabel.textContent = `${name} ${signed}ms`;
+        judgementLabel.textContent = `${prefix}${name} ${signed}ms`;
         judgementLabel.className = `hero-rhythm-judge is-visible ${name.toLowerCase()}`;
 
         window.clearTimeout(clearJudgeTimer);
@@ -466,20 +765,28 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         }, 160);
       };
 
-      // Build the next phrase and pick the first beat it fits on without
-      // crowding the previous note.
+      // Build the next note and pick the first chart slot it fits on. Normal
+      // phrases also keep clear of the previous one; hard taps take every slot.
       const planNote = (chartTime, prev) => {
-        const phrase = lanePhrases[phraseIndex % lanePhrases.length];
-        phraseIndex += 1;
-
-        const el = buildNoteElement(phrase);
+        let el;
+        if (mode === "hard") {
+          el = buildTapNote(false);
+        } else {
+          el = buildNoteElement(lanePhrases[phraseIndex % lanePhrases.length]);
+          phraseIndex += 1;
+        }
         stream.appendChild(el);
         const width = el.offsetWidth;
 
-        const earliest = prev
-          ? prev.hitTime + Math.max(MIN_NOTE_INTERVAL_MS, ((prev.width + width) * 0.5 + NOTE_GAP_PX) / speedPxPerMs)
-          : chartTime + Math.min(leadMs(width), FIRST_NOTE_LEAD_MS);
-        return { el, width, x: laneWidth, hitTime: clock.beatAtOrAfter(earliest), hit: false, judged: false };
+        const earliest = !prev
+          ? chartTime + Math.min(leadMs(width), FIRST_NOTE_LEAD_MS)
+          : mode === "hard"
+            ? prev.hitTime + 1
+            : prev.hitTime + Math.max(MIN_NOTE_INTERVAL_MS, ((prev.width + width) * 0.5 + NOTE_GAP_PX) / speedPxPerMs);
+        const hitTime = clock.noteAtOrAfter(earliest);
+        const big = mode === "hard" && clock.isBig(hitTime);
+        if (big) el.firstElementChild.classList.add("is-big");
+        return { el, width: big ? el.offsetWidth : width, x: laneWidth, hitTime, big, hit: false, judged: false };
       };
 
       const removeNote = (note, hit) => {
@@ -523,28 +830,58 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         }
       };
 
-      const triggerHit = (eventTime) => {
-        if (isResultsOpen() || !rafId) return;
+      // A big note takes its timing from the first key and waits briefly for
+      // the other one: both keys score in full, one key scores a grade lower.
+      let pendingBig = null;
+
+      const finishBig = (both) => {
+        const pending = pendingBig;
+        if (!pending) return;
+        pendingBig = null;
+        window.clearTimeout(pending.timer);
+        const index = JUDGEMENTS.indexOf(pending.judgement);
+        const judgement = both ? pending.judgement : JUDGEMENTS[Math.min(JUDGEMENTS.length - 1, index + 1)];
+        showJudgement(judgement.name, pending.offset, both ? "BIG " : "");
+        registerHit(judgement.name, pending.offset);
+        removeNote(pending.note, true);
+        maybeFinishRound();
+      };
+
+      const triggerHit = (eventTime, key) => {
+        if (isResultsOpen() || isOptionsOpen() || !rafId) return;
         lastPressAt = performance.now();
         pulseJudgementLine();
 
-        // Judge against the moment of the press, not the last rendered frame.
-        const chartTime = clock.at(eventTime);
-        let best = null;
-        let bestOffset = Infinity;
-        for (const note of notes) {
-          if (note.hit || note.judged) continue;
-          const offset = note.hitTime - chartTime;
-          if (Math.abs(offset) < Math.abs(bestOffset)) {
-            best = note;
-            bestOffset = offset;
+        if (pendingBig) {
+          if (key !== pendingBig.key && eventTime - pendingBig.at <= BIG_PAIR_MS) {
+            finishBig(true);
+            return;
           }
+          finishBig(false);
         }
-        const judgement = best && JUDGEMENTS.find((j) => Math.abs(bestOffset) <= j.ms);
-        if (!judgement) return;
+
+        // Judge against the moment of the press, not the last rendered frame,
+        // and take the earliest note still in the window (as in osu!mania), so a
+        // late press in a stream doesn't skip a note.
+        const chartTime = clock.at(eventTime);
+        const best = notes.find((note) => !note.hit && !note.judged && Math.abs(note.hitTime - chartTime) <= MISS_MS);
+        if (!best) return;
+        const bestOffset = best.hitTime - chartTime;
+        const judgement = JUDGEMENTS.find((j) => Math.abs(bestOffset) <= j.ms);
 
         const roundedOffset = Math.round(bestOffset);
         best.judged = true;
+        if (best.big) {
+          pendingBig = {
+            note: best,
+            key,
+            at: eventTime,
+            judgement,
+            offset: roundedOffset,
+            timer: window.setTimeout(() => finishBig(false), BIG_PAIR_MS),
+          };
+          return;
+        }
         showJudgement(judgement.name, roundedOffset);
         registerHit(judgement.name, roundedOffset);
         removeNote(best, true);
@@ -553,11 +890,14 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
 
       const onKeyDown = (event) => {
         if (event.repeat) return;
-        if (event.key.toLowerCase() !== rhythmInputKey.toLowerCase()) return;
+        const key = event.key.toLowerCase();
+        const isMain = key === rhythmInputKey.toLowerCase();
+        const isAlt = key === altInputKey.toLowerCase() && isUnlocked();
+        if (!isMain && !isAlt) return;
         if (isEditableTarget(event.target)) return;
 
         event.preventDefault();
-        triggerHit(event.timeStamp);
+        triggerHit(event.timeStamp, key);
       };
 
       const frame = (now) => {
@@ -575,6 +915,8 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
 
       const start = () => {
         if (!isPageActive()) return;
+        mode = currentMode();
+        if (round?.wholeSong) round = null;
         recalcMetrics();
         clearLane();
 
@@ -585,7 +927,7 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
           return;
         }
 
-        clock = createClock(audio);
+        clock = createClock(audio, mode);
         lastChartTime = -Infinity;
         rafId = window.requestAnimationFrame(frame);
       };
@@ -600,23 +942,116 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
 
       // Switching between the song clock and the free-running one moves the beat
       // grid, so start the lane over.
-      const onAudioChange = () => {
-        if (clock.synced !== !audio.paused || audio.seeking) handleActivityChange();
+      const onAudioChange = (event) => {
+        // "emptied": the player swapped tracks, so the tempo map changed.
+        // Looping also fires "seeked", but the clock already follows the wrap,
+        // so only seeks started here (restartSong) restart the lane.
+        if (event.type === "seeked") {
+          if (!restartPending) return;
+          restartPending = false;
+          handleActivityChange();
+        } else if (event.type === "emptied" || clock.synced !== !audio.paused) {
+          handleActivityChange();
+        }
       };
+
+      // Back to the top of the song (a whole-song hard round starts fresh).
+      let restartPending = false;
+      const restartSong = () => {
+        round = null;
+        if (audio && !audio.paused) {
+          restartPending = true;
+          audio.currentTime = 0;
+        }
+        handleActivityChange();
+      };
+
+      const onModeChange = () => {
+        renderModeToggle();
+        // The music player handles the same event and swaps tracks if needed.
+        restartSong();
+      };
+      const onModeToggleClick = (event) => {
+        const button = event.target.closest?.("[data-mode]");
+        if (button && button.dataset.mode !== currentMode()) setMode(button.dataset.mode);
+      };
+      const onSongClick = (event) => {
+        const button = event.target.closest?.("[data-song]");
+        if (!button || button.dataset.song === currentSong()) return;
+        writeStore(SONG_KEY, button.dataset.song);
+        // Same event as a mode change: the player swaps tracks, the lane restarts.
+        setMode("hard");
+      };
+      const restartButton = document.querySelector("[data-rhythm-restart]");
+      renderModeToggle();
+      modeToggle?.addEventListener("click", onModeToggleClick);
+      songPicker?.addEventListener("click", onSongClick);
+      restartButton?.addEventListener("click", restartSong);
+      window.addEventListener("rhythm-mode", onModeChange);
 
       const closeResults = () => resultsDialog?.close();
       const onResultsClick = (event) => {
         // Backdrop clicks land on the <dialog> itself.
         const offsetButton = event.target.closest?.("[data-rr-offset]");
+        const modeButton = event.target.closest?.("[data-rr-mode]");
         if (offsetButton) adjustUserOffset(offsetButton.dataset.rrOffset);
-        else if (event.target === resultsDialog || event.target.closest?.("[data-rr-close]")) closeResults();
+        else if (modeButton) {
+          setMode(modeButton.dataset.rrMode);
+          closeResults();
+        } else if (event.target === resultsDialog || event.target.closest?.("[data-rr-close]")) closeResults();
       };
       const onResultsClose = () => {
-        round = null;
-        handleActivityChange();
+        if (lastRoundWholeSong) {
+          lastRoundWholeSong = false;
+          restartSong();
+        } else {
+          round = null;
+          handleActivityChange();
+        }
       };
       resultsDialog?.addEventListener("click", onResultsClick);
       resultsDialog?.addEventListener("close", onResultsClose);
+
+      const renderOptions = () => {
+        if (!optionsDialog) return;
+        const speed = readSpeed();
+        const slider = optionsDialog.querySelector('[data-ro="speed"]');
+        if (slider) slider.value = String(speed);
+        const speedValue = optionsDialog.querySelector('[data-ro="speed-value"]');
+        if (speedValue) speedValue.textContent = `${speed.toFixed(1)}×`;
+        const offsetValue = optionsDialog.querySelector('[data-ro="offset-value"]');
+        if (offsetValue) offsetValue.textContent = formatMs(readUserOffset());
+      };
+      const optionsButton = document.querySelector("[data-rhythm-options-open]");
+      const openOptions = () => {
+        renderOptions();
+        optionsDialog?.showModal();
+      };
+      const onOptionsInput = (event) => {
+        if (event.target.matches?.('[data-ro="speed"]')) {
+          writeSpeed(Number(event.target.value));
+          renderOptions();
+        }
+      };
+      const onOptionsClick = (event) => {
+        const step = event.target.closest?.("[data-ro-offset]");
+        if (step) {
+          writeUserOffset(readUserOffset() + Number(step.dataset.roOffset));
+        } else if (event.target.closest?.("[data-ro-reset]")) {
+          writeSpeed(1);
+          writeUserOffset(0);
+        } else if (event.target === optionsDialog || event.target.closest?.("[data-ro-close]")) {
+          optionsDialog.close();
+          return;
+        }
+        renderOptions();
+      };
+      // Closing applies the new speed/offset by starting the lane over.
+      const onOptionsClose = () => handleActivityChange();
+      optionsButton?.addEventListener("click", openOptions);
+      optionsDialog?.addEventListener("input", onOptionsInput);
+      optionsDialog?.addEventListener("click", onOptionsClick);
+      optionsDialog?.addEventListener("close", onOptionsClose);
 
       let disposed = false;
       const fontsReady = "fonts" in document ? document.fonts.ready : Promise.resolve();
@@ -637,10 +1072,12 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
       audio?.addEventListener("playing", onAudioChange);
       audio?.addEventListener("pause", onAudioChange);
       audio?.addEventListener("seeked", onAudioChange);
+      audio?.addEventListener("emptied", onAudioChange);
 
       const onMobileTap = (e) => {
         e.preventDefault();
-        triggerHit(e.timeStamp);
+        // Each finger counts as its own key, so a two-finger tap hits big notes.
+        triggerHit(e.timeStamp, `pointer-${e.pointerId}`);
       };
 
       const mobileBtn = document.getElementById("mobile-rhythm-btn");
@@ -658,11 +1095,21 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
         audio?.removeEventListener("playing", onAudioChange);
         audio?.removeEventListener("pause", onAudioChange);
         audio?.removeEventListener("seeked", onAudioChange);
+        audio?.removeEventListener("emptied", onAudioChange);
+        modeToggle?.removeEventListener("click", onModeToggleClick);
+        songPicker?.removeEventListener("click", onSongClick);
+        restartButton?.removeEventListener("click", restartSong);
+        window.removeEventListener("rhythm-mode", onModeChange);
         if (mobileBtn) {
           mobileBtn.removeEventListener("pointerdown", onMobileTap);
         }
         resultsDialog?.removeEventListener("click", onResultsClick);
         resultsDialog?.removeEventListener("close", onResultsClose);
+        optionsButton?.removeEventListener("click", openOptions);
+        optionsDialog?.removeEventListener("input", onOptionsInput);
+        optionsDialog?.removeEventListener("click", onOptionsClick);
+        optionsDialog?.removeEventListener("close", onOptionsClose);
+        if (optionsDialog?.open) optionsDialog.close();
         if (resultsDialog?.open) resultsDialog.close();
         window.clearTimeout(clearHitTimer);
         window.clearTimeout(clearJudgeTimer);
@@ -1034,6 +1481,184 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
     background: rgba(122, 162, 247, 0.3);
   }
 
+  /* Difficulty toggle (shown once hard mode is unlocked) */
+  .rhythm-mode {
+    display: inline-flex;
+    padding: 0.2rem;
+    border-radius: 999px;
+    border: 1px solid rgba(122, 162, 247, 0.3);
+    background: rgba(20, 24, 37, 0.6);
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+  }
+
+  .rhythm-mode[hidden],
+  .rhythm-restart[hidden],
+  .rhythm-songs[hidden] {
+    display: none;
+  }
+
+  .ro-card {
+    text-align: left;
+  }
+
+  .ro-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    margin-top: 1rem;
+    font-size: 0.82rem;
+    color: var(--tokyo-contrast, #c0caf5);
+  }
+
+  .ro-label {
+    display: flex;
+    justify-content: space-between;
+    letter-spacing: 0.06em;
+  }
+
+  .ro-label output {
+    font-weight: 700;
+    color: #7dcfff;
+  }
+
+  .ro-field input[type="range"] {
+    accent-color: #7aa2f7;
+  }
+
+  .ro-stepper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .ro-help {
+    margin-top: 0.35rem;
+    font-size: 0.72rem;
+    line-height: 1.5;
+    color: rgba(169, 177, 214, 0.7);
+  }
+
+  .ro-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 1.2rem;
+  }
+
+  .ro-done {
+    flex: 1;
+    border-radius: 0.75rem;
+  }
+
+  :global(html.light) .ro-field {
+    color: #2f3550;
+  }
+
+  :global(html.light) .ro-label output {
+    color: #1d63a8;
+  }
+
+  :global(html.light) .ro-help {
+    color: rgba(59, 66, 97, 0.75);
+  }
+
+  .rhythm-mode-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+  }
+
+  .rhythm-restart {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid rgba(122, 162, 247, 0.3);
+    background: rgba(20, 24, 37, 0.6);
+    color: rgba(192, 202, 245, 0.75);
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    transition: color 150ms ease, border-color 150ms ease;
+  }
+
+  .rhythm-restart:hover {
+    color: #7dcfff;
+    border-color: rgba(122, 162, 247, 0.6);
+  }
+
+  .rhythm-songs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.4rem;
+    margin: 0.5rem auto 0;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+  }
+
+  .rhythm-songs button {
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 158, 100, 0.25);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    color: rgba(192, 202, 245, 0.65);
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+
+  .rhythm-songs button[aria-pressed="true"] {
+    border-color: rgba(255, 158, 100, 0.6);
+    background: rgba(255, 158, 100, 0.15);
+    color: #ff9e64;
+  }
+
+  .rhythm-mode button {
+    padding: 0.25rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: rgba(192, 202, 245, 0.65);
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+
+  .rhythm-mode button[aria-pressed="true"] {
+    background: rgba(122, 162, 247, 0.22);
+    color: #7dcfff;
+  }
+
+  .rhythm-mode button[data-mode="hard"][aria-pressed="true"] {
+    background: rgba(255, 158, 100, 0.2);
+    color: #ff9e64;
+  }
+
+  /* Hard-mode tap notes */
+  :global(.hard-note.is-big) {
+    width: clamp(1.9rem, 3.8vw, 2.9rem);
+    height: clamp(1.9rem, 3.8vw, 2.9rem);
+    border-width: 4px;
+    border-color: #f7768e;
+    background: radial-gradient(circle at 35% 35%, #ffe4e8, #f7768e 70%);
+    box-shadow: 0 0 18px rgba(247, 118, 142, 0.8);
+  }
+
+  :global(.hard-note) {
+    display: block;
+    width: clamp(1.2rem, 2.4vw, 1.9rem);
+    height: clamp(1.2rem, 2.4vw, 1.9rem);
+    border-radius: 999px;
+    border: 3px solid #ff9e64;
+    background: radial-gradient(circle at 35% 35%, #fff4e6, #ff9e64 70%);
+    box-shadow: 0 0 14px rgba(255, 158, 100, 0.75);
+  }
+
+
   /* Results screen */
   .rhythm-results {
     margin: auto;
@@ -1263,6 +1888,62 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
     cursor: default;
   }
 
+  .rr-unlock {
+    margin-top: 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: 0.8rem;
+    border: 1px solid rgba(255, 158, 100, 0.45);
+    background: rgba(255, 158, 100, 0.08);
+    box-shadow: 0 0 22px rgba(255, 158, 100, 0.15);
+  }
+
+  .rr-unlock[hidden] {
+    display: none;
+  }
+
+  .rhythm-results[open] .rr-unlock:not([hidden]) {
+    animation: rr-rank-in 520ms 300ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  }
+
+  .rr-unlock-title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.22em;
+    color: #ff9e64;
+  }
+
+  .rr-unlock-text {
+    margin-top: 0.3rem;
+    font-size: 0.74rem;
+    line-height: 1.5;
+    color: rgba(192, 202, 245, 0.8);
+  }
+
+  .rr-unlock-text kbd {
+    padding: 0 0.3rem;
+    border-radius: 0.3rem;
+    border: 1px solid rgba(255, 158, 100, 0.5);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.7rem;
+    color: #ff9e64;
+  }
+
+  .rr-unlock-btn {
+    margin-top: 0.6rem;
+    padding: 0.4rem 1rem;
+    border-radius: 0.6rem;
+    border: 1px solid rgba(255, 158, 100, 0.6);
+    color: #ff9e64;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    transition: background-color 150ms ease;
+  }
+
+  .rr-unlock-btn:hover {
+    background: rgba(255, 158, 100, 0.15);
+  }
+
   .rr-retry {
     margin-top: 1.1rem;
     width: 100%;
@@ -1341,6 +2022,73 @@ const timing = { offsetMs: music.offsetMs, timingPoints: music.timingPoints };
   :global(html.light) .rr-score,
   :global(html.light) .rr-stat dd {
     color: #2f3550;
+  }
+
+  :global(html.light) .rhythm-mode {
+    border-color: rgba(42, 91, 184, 0.25);
+    background: rgba(255, 255, 255, 0.7);
+  }
+
+  :global(html.light) .rhythm-restart {
+    border-color: rgba(42, 91, 184, 0.25);
+    background: rgba(255, 255, 255, 0.7);
+    color: rgba(59, 66, 97, 0.75);
+  }
+
+  :global(html.light) .rhythm-songs button {
+    border-color: rgba(177, 92, 0, 0.25);
+    color: rgba(59, 66, 97, 0.7);
+  }
+
+  :global(html.light) .rhythm-songs button[aria-pressed="true"] {
+    border-color: rgba(177, 92, 0, 0.5);
+    background: rgba(177, 92, 0, 0.1);
+    color: #b15c00;
+  }
+
+  :global(html.light) .rhythm-mode button {
+    color: rgba(59, 66, 97, 0.65);
+  }
+
+  :global(html.light) .rhythm-mode button[aria-pressed="true"] {
+    background: rgba(42, 91, 184, 0.12);
+    color: #2a5bb8;
+  }
+
+  :global(html.light) .rhythm-mode button[data-mode="hard"][aria-pressed="true"] {
+    background: rgba(177, 92, 0, 0.12);
+    color: #b15c00;
+  }
+
+  :global(html.light .hard-note.is-big) {
+    border-color: #c4314b;
+    background: radial-gradient(circle at 35% 35%, #fff, #e8798c 70%);
+    box-shadow: 0 0 12px rgba(196, 49, 75, 0.45);
+  }
+
+  :global(html.light .hard-note) {
+    border-color: #d16d00;
+    background: radial-gradient(circle at 35% 35%, #fff, #f0a050 70%);
+    box-shadow: 0 0 10px rgba(209, 109, 0, 0.45);
+  }
+
+  :global(html.light) .rr-unlock {
+    border-color: rgba(177, 92, 0, 0.35);
+    background: rgba(177, 92, 0, 0.06);
+    box-shadow: none;
+  }
+
+  :global(html.light) .rr-unlock-title,
+  :global(html.light) .rr-unlock-btn {
+    color: #b15c00;
+  }
+
+  :global(html.light) .rr-unlock-btn {
+    border-color: rgba(177, 92, 0, 0.5);
+  }
+
+  :global(html.light) .rr-unlock-text {
+    color: rgba(59, 66, 97, 0.85);
   }
 
   :global(html.light) .rr-calibrate {

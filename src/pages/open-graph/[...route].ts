@@ -20,6 +20,10 @@ const pages = {
     title: '~/eter/blog',
     description: 'eter\'s personal blogs.',
   },
+  lab: {
+    title: '~/eter/lab',
+    description: 'Interactive crypto visualizers.',
+  },
   ...Object.fromEntries(
     posts.map((post) => [
       `blog/${post.slug}`,

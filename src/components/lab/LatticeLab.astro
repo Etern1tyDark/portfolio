@@ -1,0 +1,249 @@
+---
+---
+
+<section class="lab-card lt-lab" data-lt-lab>
+  <header>
+    <p class="lab-card-eyebrow">Visualizer 03</p>
+    <h2 class="lab-card-title">Lattices and the closest vector problem</h2>
+    <p class="lab-card-intro">
+      A lattice is every integer combination of two basis vectors. The same lattice has many bases: a short,
+      nearly orthogonal "good" one and long, skewed "bad" ones. Tap anywhere to drop a target: rounding it to the
+      lattice with the good basis (Babai's method) lands on the closest point, with a bad basis it usually misses.
+      Lattice schemes like ML-DSA (used in my Q-Sealnet project) publish a bad basis and keep the good one secret.
+    </p>
+  </header>
+
+  <div class="lab-card-body">
+    <div class="lab-plot-wrap">
+      <svg class="lab-plot lt-plot" data-lt-plot viewBox="-10 -10 20 20" role="img" aria-label="Lattice points and basis vectors"></svg>
+      <p class="lab-hint">Tap anywhere to place a target point.</p>
+    </div>
+
+    <div class="lab-controls">
+      <div class="lab-tabs" role="tablist" aria-label="Basis">
+        <button type="button" role="tab" data-lt-basis="good" aria-selected="true">Good basis</button>
+        <button type="button" role="tab" data-lt-basis="bad" aria-selected="false">Bad basis</button>
+      </div>
+      <button type="button" class="lab-button lt-reroll" data-lt-reroll>New bad basis</button>
+      <p class="lab-readout" data-lt-readout aria-live="polite"></p>
+      <dl class="lab-facts" data-lt-facts></dl>
+      <p class="lab-note" data-lt-note></p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .lt-lab {
+    --lt-b1: #7aa2f7;
+    --lt-b2: #bb9af7;
+    --lt-target: #f7768e;
+    --lt-babai: #e0af68;
+    --lt-closest: #9ece6a;
+  }
+
+  :global(html.light) .lt-lab {
+    --lt-b1: #2a5bb8;
+    --lt-b2: #7c3fc4;
+    --lt-target: #c4314b;
+    --lt-babai: #a8640c;
+    --lt-closest: #3f7f17;
+  }
+
+  .lt-reroll {
+    align-self: flex-start;
+  }
+
+  .lt-plot :global(.cell) { fill: var(--lt-b1); opacity: 0.08; stroke: var(--lt-b1); stroke-opacity: 0.35; }
+  .lt-plot :global(.axis) { stroke: var(--lab-grid); }
+  .lt-plot :global(.lp) { fill: var(--lab-point); opacity: 0.75; }
+  .lt-plot :global(.b1) { stroke: var(--lt-b1); }
+  .lt-plot :global(.b2) { stroke: var(--lt-b2); }
+  .lt-plot :global(.target) { stroke: var(--lt-target); }
+  .lt-plot :global(.babai) { fill: none; stroke: var(--lt-babai); }
+  .lt-plot :global(.closest) { fill: none; stroke: var(--lt-closest); }
+  .lt-plot :global(.link-babai) { stroke: var(--lt-babai); }
+  .lt-plot :global(.link-closest) { stroke: var(--lt-closest); }
+
+  .lt-lab :global(.tag-babai) { color: var(--lt-babai); font-weight: 700; }
+  .lt-lab :global(.tag-closest) { color: var(--lt-closest); font-weight: 700; }
+</style>
+
+<script>
+  type Vec = [number, number];
+
+  // The secret short basis; bad bases are this times a random unimodular matrix.
+  const GOOD: [Vec, Vec] = [
+    [2.2, 0.6],
+    [-0.7, 2.4],
+  ];
+  const VIEW = 10;
+
+  const add = (a: Vec, b: Vec): Vec => [a[0] + b[0], a[1] + b[1]];
+  const scale = (a: Vec, s: number): Vec => [a[0] * s, a[1] * s];
+  const dist = (a: Vec, b: Vec) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  const len = (a: Vec) => Math.hypot(a[0], a[1]);
+
+  const combine = ([b1, b2]: [Vec, Vec], c1: number, c2: number): Vec => add(scale(b1, c1), scale(b2, c2));
+
+  // Coordinates of t in the basis (B⁻¹·t).
+  const solve = ([b1, b2]: [Vec, Vec], t: Vec): Vec => {
+    const det = b1[0] * b2[1] - b2[0] * b1[1];
+    return [(t[0] * b2[1] - b2[0] * t[1]) / det, (b1[0] * t[1] - t[0] * b1[1]) / det];
+  };
+
+  // Random unimodular matrix (det ±1) built from shears, so the new basis
+  // spans exactly the same lattice but is long and nearly parallel. Retries
+  // until both vectors still fit in the plot.
+  const badBasis = (): [Vec, Vec] => {
+    for (let attempt = 0; attempt < 500; attempt += 1) {
+      let [b1, b2] = GOOD;
+      for (let i = 0; i < 2; i += 1) {
+        const m = (Math.random() < 0.5 ? -1 : 1) * (1 + Math.floor(Math.random() * 3));
+        if (i % 2 === 0) b1 = add(b1, scale(b2, m));
+        else b2 = add(b2, scale(b1, m));
+      }
+      const cos = Math.abs(b1[0] * b2[0] + b1[1] * b2[1]) / (len(b1) * len(b2));
+      if (len(b1) >= 5 && len(b1) <= 9.5 && len(b2) >= 5 && len(b2) <= 9.5 && cos > 0.85) return [b1, b2];
+    }
+    return [add(GOOD[0], scale(GOOD[1], 2)), add(scale(GOOD[0], 3), scale(GOOD[1], 7))];
+  };
+
+  const init = () => {
+    const root = document.querySelector<HTMLElement>("[data-lt-lab]");
+    if (!root || root.dataset.bound === "1") return;
+    root.dataset.bound = "1";
+
+    const svg = root.querySelector<SVGSVGElement>("[data-lt-plot]")!;
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-lt-basis]"));
+    const reroll = root.querySelector<HTMLButtonElement>("[data-lt-reroll]")!;
+    const readout = root.querySelector<HTMLElement>("[data-lt-readout]")!;
+    const facts = root.querySelector<HTMLElement>("[data-lt-facts]")!;
+    const note = root.querySelector<HTMLElement>("[data-lt-note]")!;
+
+    let bad = badBasis();
+    let which: "good" | "bad" = "good";
+    let target: Vec = [3.3, 2.1];
+
+    const NS = "http://www.w3.org/2000/svg";
+    const el = (name: string, attrs: Record<string, string | number>) => {
+      const node = document.createElementNS(NS, name);
+      for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
+      svg.appendChild(node);
+      return node;
+    };
+    // y up in the plot.
+    const P = (v: Vec) => [v[0], -v[1]];
+
+    const arrow = (to: Vec, cls: string) => {
+      const [x, y] = P(to);
+      el("line", { class: cls, x1: 0, y1: 0, x2: x, y2: y, "stroke-width": 0.12, "stroke-linecap": "round" });
+      const ang = Math.atan2(y, x);
+      const head = 0.45;
+      const pts = [
+        [x, y],
+        [x - head * Math.cos(ang - 0.4), y - head * Math.sin(ang - 0.4)],
+        [x - head * Math.cos(ang + 0.4), y - head * Math.sin(ang + 0.4)],
+      ];
+      el("polygon", { points: pts.map((p) => p.join(",")).join(" "), style: `fill: var(--lt-${cls}); stroke: none` });
+    };
+
+    // All lattice points in view (coefficients searched widely enough for skewed bases).
+    const latticePoints = (): Vec[] => {
+      const out: Vec[] = [];
+      for (let i = -12; i <= 12; i += 1) {
+        for (let j = -12; j <= 12; j += 1) {
+          const v = combine(GOOD, i, j);
+          if (Math.abs(v[0]) <= VIEW + 0.5 && Math.abs(v[1]) <= VIEW + 0.5) out.push(v);
+        }
+      }
+      return out;
+    };
+    const points = latticePoints();
+
+    const render = () => {
+      const basis = which === "good" ? GOOD : bad;
+      svg.replaceChildren();
+      el("line", { class: "axis", x1: -VIEW, y1: 0, x2: VIEW, y2: 0, "stroke-width": 0.04 });
+      el("line", { class: "axis", x1: 0, y1: -VIEW, x2: 0, y2: VIEW, "stroke-width": 0.04 });
+
+      // Babai rounding: round t's coordinates in this basis to integers.
+      const coords = solve(basis, target);
+      const c1 = Math.round(coords[0]);
+      const c2 = Math.round(coords[1]);
+      const babai = combine(basis, c1, c2);
+
+      // Fundamental cell of the basis, placed where Babai's rounding looked.
+      const corner = combine(basis, Math.floor(coords[0]), Math.floor(coords[1]));
+      const cell = [corner, add(corner, basis[0]), add(add(corner, basis[0]), basis[1]), add(corner, basis[1])];
+      el("polygon", { class: "cell", points: cell.map((v) => P(v).join(",")).join(" "), "stroke-width": 0.05 });
+
+      for (const v of points) {
+        const [x, y] = P(v);
+        el("circle", { class: "lp", cx: x, cy: y, r: 0.16 });
+      }
+      arrow(basis[0], "b1");
+      arrow(basis[1], "b2");
+
+      const closest = points.reduce((best, v) => (dist(v, target) < dist(best, target) ? v : best), points[0]);
+      const [tx, ty] = P(target);
+      const [bx, by] = P(babai);
+      const [cx, cy] = P(closest);
+      el("line", { class: "link-babai", x1: tx, y1: ty, x2: bx, y2: by, "stroke-width": 0.07, "stroke-dasharray": "0.25 0.15" });
+      el("line", { class: "link-closest", x1: tx, y1: ty, x2: cx, y2: cy, "stroke-width": 0.07 });
+      el("circle", { class: "closest", cx, cy, r: 0.42, "stroke-width": 0.1 });
+      el("circle", { class: "babai", cx: bx, cy: by, r: 0.6, "stroke-width": 0.1, "stroke-dasharray": "0.3 0.18" });
+      el("line", { class: "target", x1: tx - 0.3, y1: ty - 0.3, x2: tx + 0.3, y2: ty + 0.3, "stroke-width": 0.12 });
+      el("line", { class: "target", x1: tx - 0.3, y1: ty + 0.3, x2: tx + 0.3, y2: ty - 0.3, "stroke-width": 0.12 });
+
+      const hit = dist(babai, closest) < 1e-6;
+      const fmt = (v: Vec) => `(${v[0].toFixed(1)}, ${v[1].toFixed(1)})`;
+      readout.innerHTML =
+        `target t = ${fmt(target)}<br/>` +
+        `<span class="tag-babai">Babai</span>: round(${coords[0].toFixed(2)}, ${coords[1].toFixed(2)}) → (${c1}, ${c2}) → ${fmt(babai)}, distance ${dist(babai, target).toFixed(2)}<br/>` +
+        `<span class="tag-closest">Closest</span>: ${fmt(closest)}, distance ${dist(closest, target).toFixed(2)}`;
+      facts.innerHTML = "";
+      const row = (term: string, value: string) => {
+        const dt = document.createElement("dt");
+        dt.textContent = term;
+        const dd = document.createElement("dd");
+        dd.textContent = value;
+        facts.append(dt, dd);
+      };
+      row("|b₁|, |b₂|", `${len(basis[0]).toFixed(1)}, ${len(basis[1]).toFixed(1)}`);
+      const cos = (basis[0][0] * basis[1][0] + basis[0][1] * basis[1][1]) / (len(basis[0]) * len(basis[1]));
+      row("Angle", `${((Math.acos(Math.abs(cos)) * 180) / Math.PI).toFixed(0)}° between b₁ and b₂`);
+      row("Cell area", `${Math.abs(basis[0][0] * basis[1][1] - basis[1][0] * basis[0][1]).toFixed(2)} (same for every basis)`);
+      note.textContent = hit
+        ? which === "good"
+          ? "The good basis rounds straight to the closest point."
+          : "Lucky: the bad basis found it this time. Try a few more targets."
+        : `The bad basis's long, thin cell makes rounding land ${dist(babai, target).toFixed(1)} away instead of ${dist(closest, target).toFixed(1)}. In hundreds of dimensions that gap is what keeps the secret.`;
+    };
+
+    for (const tab of tabs) {
+      tab.addEventListener("click", () => {
+        which = tab.dataset.ltBasis as "good" | "bad";
+        for (const t of tabs) t.setAttribute("aria-selected", String(t === tab));
+        reroll.hidden = which !== "bad";
+        render();
+      });
+    }
+    reroll.addEventListener("click", () => {
+      bad = badBasis();
+      render();
+    });
+    svg.addEventListener("pointerdown", (event) => {
+      const ctm = svg.getScreenCTM();
+      if (!ctm) return;
+      const loc = new DOMPoint(event.clientX, event.clientY).matrixTransform(ctm.inverse());
+      target = [loc.x, -loc.y];
+      render();
+    });
+
+    reroll.hidden = true;
+    render();
+  };
+
+  init();
+  document.addEventListener("astro:page-load", init);
+</script>

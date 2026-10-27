@@ -1,0 +1,776 @@
+---
+const presets = [
+  { label: 'Textbook: y² = x³ + 2x + 2 (mod 17)', p: 17, a: 2, b: 2 },
+  { label: 'Classic: y² = x³ + x + 1 (mod 23)', p: 23, a: 1, b: 1 },
+  { label: "secp256k1's shape: y² = x³ + 7 (mod 67)", p: 67, a: 0, b: 7 },
+  { label: 'Bigger: y² = x³ + 2x + 3 (mod 97)', p: 97, a: 2, b: 3 },
+];
+---
+
+<section class="ec-lab" data-ec-lab>
+  <header class="ec-head">
+    <p class="ec-eyebrow">Visualizer 01</p>
+    <h2 class="ec-title">Elliptic curves over F<sub>p</sub></h2>
+    <p class="ec-intro">
+      Over a finite field an elliptic curve isn't a smooth line any more. It's a scatter of points
+      that still form a group. Pick points to add them, or step through k·P to see how
+      scalar multiplication, the operation ECDSA is built on, hops around the curve.
+    </p>
+  </header>
+
+  <div class="ec-body">
+    <div class="ec-plot-wrap">
+      <svg class="ec-plot" data-ec-plot role="img" aria-label="Points of the elliptic curve"></svg>
+      <p class="ec-hint" data-ec-hint></p>
+    </div>
+
+    <div class="ec-controls">
+      <label class="ec-field ec-field-wide">
+        <span>Curve</span>
+        <select data-ec-preset>
+          {presets.map((preset, index) => (
+            <option value={index} data-p={preset.p} data-a={preset.a} data-b={preset.b}>{preset.label}</option>
+          ))}
+          <option value="custom">Custom</option>
+        </select>
+      </label>
+
+      <div class="ec-params">
+        <label class="ec-field"><span>p</span><input type="number" inputmode="numeric" min="5" max="251" data-ec-param="p" value="17" /></label>
+        <label class="ec-field"><span>a</span><input type="number" inputmode="numeric" data-ec-param="a" value="2" /></label>
+        <label class="ec-field"><span>b</span><input type="number" inputmode="numeric" data-ec-param="b" value="2" /></label>
+      </div>
+      <p class="ec-error" data-ec-error role="alert" hidden></p>
+
+      <dl class="ec-facts" data-ec-facts></dl>
+
+      <div class="ec-tabs" role="tablist" aria-label="Operation">
+        <button type="button" role="tab" data-ec-mode="add" aria-selected="true">P + Q</button>
+        <button type="button" role="tab" data-ec-mode="mul" aria-selected="false">k · P</button>
+      </div>
+
+      <div class="ec-panel" data-ec-panel="add">
+        <p class="ec-readout" data-ec-add-readout aria-live="polite"></p>
+        <ol class="ec-steps" data-ec-add-steps></ol>
+      </div>
+
+      <div class="ec-panel" data-ec-panel="mul" hidden>
+        <div class="ec-k-row">
+          <label class="ec-field ec-k">
+            <span>k = <output data-ec-k-value>1</output></span>
+            <input type="range" min="1" max="1" value="1" data-ec-k />
+          </label>
+          <button type="button" class="ec-play" data-ec-play>Play</button>
+        </div>
+        <p class="ec-readout" data-ec-mul-readout aria-live="polite"></p>
+        <p class="ec-note" data-ec-mul-note></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .ec-lab {
+    --ec-surface: var(--tokyo-surface-2, #1f2335);
+    --ec-border: rgba(86, 95, 137, 0.55);
+    --ec-text: #c0caf5;
+    --ec-muted: rgba(169, 177, 214, 0.75);
+    --ec-grid: rgba(86, 95, 137, 0.28);
+    --ec-axis: rgba(169, 177, 214, 0.55);
+    --ec-point: #7dcfff;
+    --ec-p: #7aa2f7;
+    --ec-q: #bb9af7;
+    --ec-r: #9ece6a;
+    --ec-line: #e0af68;
+
+    border-radius: 16px;
+    border: 1px solid var(--ec-border);
+    background: linear-gradient(140deg, rgba(36, 40, 59, 0.96), rgba(20, 24, 37, 0.94));
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.4);
+    padding: clamp(1.1rem, 3vw, 2rem);
+    color: var(--ec-text);
+  }
+
+  :global(html.light) .ec-lab {
+    --ec-surface: #ffffff;
+    --ec-border: rgba(42, 91, 184, 0.2);
+    --ec-text: #2f3550;
+    --ec-muted: rgba(59, 66, 97, 0.75);
+    --ec-grid: rgba(52, 59, 88, 0.12);
+    --ec-axis: rgba(59, 66, 97, 0.6);
+    --ec-point: #007197;
+    --ec-p: #2a5bb8;
+    --ec-q: #7c3fc4;
+    --ec-r: #3f7f17;
+    --ec-line: #a8640c;
+
+    background: linear-gradient(140deg, rgba(255, 255, 255, 0.92), rgba(236, 238, 245, 0.95));
+    box-shadow: 0 18px 45px rgba(52, 59, 88, 0.12);
+  }
+
+  .ec-eyebrow {
+    font-size: 0.72rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--ec-muted);
+  }
+
+  .ec-title {
+    margin-top: 0.3rem;
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 800;
+    color: var(--ec-p);
+  }
+
+  .ec-intro {
+    margin-top: 0.6rem;
+    max-width: 62ch;
+    line-height: 1.65;
+    color: var(--ec-muted);
+  }
+
+  .ec-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: clamp(1rem, 3vw, 2rem);
+    margin-top: 1.5rem;
+    align-items: start;
+  }
+
+  .ec-plot-wrap {
+    position: sticky;
+    top: calc(4.5rem + env(safe-area-inset-top, 0px));
+  }
+
+  .ec-plot {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 12px;
+    border: 1px solid var(--ec-border);
+    background: var(--ec-surface);
+    touch-action: manipulation;
+    cursor: crosshair;
+    user-select: none;
+  }
+
+  .ec-hint {
+    margin-top: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--ec-muted);
+    text-align: center;
+  }
+
+  .ec-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    min-width: 0;
+  }
+
+  .ec-params {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .ec-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    color: var(--ec-muted);
+  }
+
+  .ec-field select,
+  .ec-field input[type="number"] {
+    width: 100%;
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.6rem;
+    border: 1px solid var(--ec-border);
+    background: var(--ec-surface);
+    color: var(--ec-text);
+    font-family: "Fira Code", monospace;
+    font-size: 0.85rem;
+  }
+
+  .ec-field select:focus-visible,
+  .ec-field input:focus-visible {
+    outline: 2px solid var(--ec-p);
+    outline-offset: 1px;
+  }
+
+  .ec-error {
+    font-size: 0.8rem;
+    color: #f7768e;
+  }
+
+  .ec-facts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.3rem 0.9rem;
+    padding: 0.8rem 0.9rem;
+    border-radius: 0.7rem;
+    border: 1px solid var(--ec-border);
+    background: rgba(122, 162, 247, 0.05);
+    font-size: 0.82rem;
+  }
+
+  .ec-facts :global(dt) {
+    color: var(--ec-muted);
+  }
+
+  .ec-facts :global(dd) {
+    margin: 0;
+    font-family: "Fira Code", monospace;
+  }
+
+  .ec-tabs {
+    display: inline-flex;
+    align-self: flex-start;
+    padding: 0.2rem;
+    border-radius: 999px;
+    border: 1px solid var(--ec-border);
+  }
+
+  .ec-tabs button {
+    padding: 0.35rem 1rem;
+    border-radius: 999px;
+    font-family: "Fira Code", monospace;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--ec-muted);
+  }
+
+  .ec-tabs button[aria-selected="true"] {
+    background: rgba(122, 162, 247, 0.18);
+    color: var(--ec-p);
+  }
+
+  .ec-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+
+  .ec-panel[hidden] {
+    display: none;
+  }
+
+  .ec-readout {
+    font-family: "Fira Code", monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
+  .ec-readout :global(.tag-p) { color: var(--ec-p); font-weight: 700; }
+  .ec-readout :global(.tag-q) { color: var(--ec-q); font-weight: 700; }
+  .ec-readout :global(.tag-r) { color: var(--ec-r); font-weight: 700; }
+
+  .ec-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.8rem 0.9rem 0.8rem 2rem;
+    border-radius: 0.7rem;
+    background: rgba(15, 23, 42, 0.45);
+    font-family: "Fira Code", monospace;
+    font-size: 0.76rem;
+    line-height: 1.55;
+    list-style: decimal;
+    overflow-wrap: anywhere;
+  }
+
+  .ec-steps:empty {
+    display: none;
+  }
+
+  :global(html.light) .ec-steps {
+    background: rgba(42, 91, 184, 0.06);
+  }
+
+  .ec-k-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.8rem;
+  }
+
+  .ec-k {
+    flex: 1;
+  }
+
+  .ec-k input {
+    accent-color: var(--ec-p);
+  }
+
+  .ec-play {
+    padding: 0.4rem 1rem;
+    border-radius: 0.6rem;
+    border: 1px solid var(--ec-border);
+    color: var(--ec-p);
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .ec-play:hover {
+    background: rgba(122, 162, 247, 0.12);
+  }
+
+  .ec-note {
+    font-size: 0.8rem;
+    line-height: 1.55;
+    color: var(--ec-muted);
+  }
+
+  /* SVG contents are built by the script. */
+  .ec-plot :global(.grid) { stroke: var(--ec-grid); }
+  .ec-plot :global(.axis-label) { fill: var(--ec-axis); font-family: "Fira Code", monospace; }
+  .ec-plot :global(.pt) { fill: var(--ec-point); opacity: 0.85; transition: opacity 150ms ease; }
+  .ec-plot :global(.pt.dim) { opacity: 0.35; }
+  .ec-plot :global(.line-dot) { fill: var(--ec-line); opacity: 0.7; }
+  .ec-plot :global(.vline) { stroke: var(--ec-line); opacity: 0.6; }
+  .ec-plot :global(.orbit) { fill: none; stroke: var(--ec-p); opacity: 0.35; }
+  .ec-plot :global(.ring) { fill: none; }
+  .ec-plot :global(.ring-p) { stroke: var(--ec-p); }
+  .ec-plot :global(.ring-q) { stroke: var(--ec-q); }
+  .ec-plot :global(.ring-r) { stroke: var(--ec-r); }
+  .ec-plot :global(.ring-neg) { stroke: var(--ec-line); }
+  .ec-plot :global(.fill-p) { fill: var(--ec-p); }
+  .ec-plot :global(.fill-q) { fill: var(--ec-q); }
+  .ec-plot :global(.fill-r) { fill: var(--ec-r); }
+  .ec-plot :global(.mark-label) { font-family: "Fira Code", monospace; font-weight: 700; paint-order: stroke; stroke: var(--ec-surface); }
+  .ec-plot :global(.label-p) { fill: var(--ec-p); }
+  .ec-plot :global(.label-q) { fill: var(--ec-q); }
+  .ec-plot :global(.label-r) { fill: var(--ec-r); }
+  .ec-plot :global(.label-orbit) { fill: var(--ec-muted); font-family: "Fira Code", monospace; }
+  .ec-plot :global(.reflect) { stroke: var(--ec-r); opacity: 0.55; }
+
+  @media (max-width: 860px) {
+    .ec-body {
+      grid-template-columns: 1fr;
+    }
+
+    .ec-plot-wrap {
+      position: static;
+    }
+  }
+</style>
+
+<script>
+  import {
+    add,
+    isPrime,
+    isSmooth,
+    mod,
+    multiples,
+    negate,
+    order,
+    points as curvePoints,
+    same,
+    type Curve,
+    type Point,
+  } from "./ecc";
+
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const MAX_P = 251;
+  const PLAY_STEP_MS = 420;
+
+  type Pt = { x: number; y: number };
+
+  const init = () => {
+    const root = document.querySelector<HTMLElement>("[data-ec-lab]");
+    if (!root || root.dataset.bound === "1") return;
+    root.dataset.bound = "1";
+
+    const svg = root.querySelector<SVGSVGElement>("[data-ec-plot]")!;
+    const hint = root.querySelector<HTMLElement>("[data-ec-hint]")!;
+    const presetSelect = root.querySelector<HTMLSelectElement>("[data-ec-preset]")!;
+    const params = {
+      p: root.querySelector<HTMLInputElement>('[data-ec-param="p"]')!,
+      a: root.querySelector<HTMLInputElement>('[data-ec-param="a"]')!,
+      b: root.querySelector<HTMLInputElement>('[data-ec-param="b"]')!,
+    };
+    const errorEl = root.querySelector<HTMLElement>("[data-ec-error]")!;
+    const facts = root.querySelector<HTMLElement>("[data-ec-facts]")!;
+    const tabs = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-ec-mode]"));
+    const panels = Array.from(root.querySelectorAll<HTMLElement>("[data-ec-panel]"));
+    const addReadout = root.querySelector<HTMLElement>("[data-ec-add-readout]")!;
+    const addSteps = root.querySelector<HTMLElement>("[data-ec-add-steps]")!;
+    const kInput = root.querySelector<HTMLInputElement>("[data-ec-k]")!;
+    const kValue = root.querySelector<HTMLElement>("[data-ec-k-value]")!;
+    const playBtn = root.querySelector<HTMLButtonElement>("[data-ec-play]")!;
+    const mulReadout = root.querySelector<HTMLElement>("[data-ec-mul-readout]")!;
+    const mulNote = root.querySelector<HTMLElement>("[data-ec-mul-note]")!;
+
+    let curve: Curve = { p: 17, a: 2, b: 2 };
+    let pts: Pt[] = [];
+    let groupSize = 0;
+    let mode: "add" | "mul" = "add";
+    let P: Pt | null = null;
+    let Q: Pt | null = null;
+    let k = 1;
+    let playTimer = 0;
+
+    const fmt = (pt: Point) => (pt === null ? "O" : `(${pt.x}, ${pt.y})`);
+    const sub = (n: number) => String(n).replace(/\d/g, (d) => "₀₁₂₃₄₅₆₇₈₉"[Number(d)]);
+
+    // ----- drawing -----
+    const el = (name: string, attrs: Record<string, string | number>, parent: Element = svg) => {
+      const node = document.createElementNS(SVG_NS, name);
+      for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
+      parent.appendChild(node);
+      return node;
+    };
+
+    // Plot coordinates: x to the right, y up, one unit per field element.
+    const X = (x: number) => x;
+    const Y = (y: number) => curve.p - 1 - y;
+    // Keep marks a sensible on-screen size whatever p is (~520px plot).
+    const unitsPerPx = () => (curve.p - 1) / Math.max((svg.clientWidth || 520) - 50, 190);
+    const px = (n: number) => n * unitsPerPx();
+
+    const draw = () => {
+      const { p } = curve;
+      svg.replaceChildren();
+      // Margins in screen pixels so axis labels fit at any p.
+      const [left, right, top, bottom] = [px(34), px(16), px(16), px(28)];
+      svg.setAttribute("viewBox", `${-left} ${-top} ${p - 1 + left + right} ${p - 1 + top + bottom}`);
+
+      const gridStep = p <= 31 ? 1 : p <= 101 ? 5 : 10;
+      const labelStep = p <= 31 ? 4 : p <= 101 ? 10 : 25;
+      const grid = el("g", { class: "grid", "stroke-width": px(1) });
+      for (let v = 0; v < p; v += gridStep) {
+        el("line", { x1: X(v), y1: Y(0), x2: X(v), y2: Y(p - 1) }, grid);
+        el("line", { x1: X(0), y1: Y(v), x2: X(p - 1), y2: Y(v) }, grid);
+      }
+      const labels = el("g", { "font-size": px(11) });
+      const ticks = new Set<number>([0, p - 1]);
+      for (let v = labelStep; v < p - labelStep / 2; v += labelStep) ticks.add(v);
+      for (const v of ticks) {
+        el("text", { class: "axis-label", x: X(v), y: Y(0) + px(16), "text-anchor": "middle" }, labels).textContent = String(v);
+        el("text", { class: "axis-label", x: X(0) - px(8), y: Y(v) + px(4), "text-anchor": "end" }, labels).textContent = String(v);
+      }
+
+      const r = px(Math.max(2.6, Math.min(7, 150 / p)));
+      const highlight = mode === "add" ? drawAddOverlay() : drawMulOverlay();
+      const dots = el("g", {});
+      for (const pt of pts) {
+        const dot = el("circle", { class: `pt${highlight.dim ? " dim" : ""}`, cx: X(pt.x), cy: Y(pt.y), r }, dots);
+        el("title", {}, dot).textContent = `(${pt.x}, ${pt.y})`;
+      }
+      highlight.marks();
+    };
+
+    const ring = (pt: Pt, cls: string, scale = 1, dashed = false) =>
+      el("circle", {
+        class: `ring ${cls}`,
+        cx: X(pt.x),
+        cy: Y(pt.y),
+        r: px(Math.max(6, Math.min(11, 190 / curve.p)) * scale),
+        "stroke-width": px(2.2),
+        ...(dashed ? { "stroke-dasharray": `${px(3)} ${px(2.5)}` } : {}),
+      });
+
+    const dotMark = (pt: Pt, cls: string) =>
+      el("circle", { class: cls, cx: X(pt.x), cy: Y(pt.y), r: px(Math.max(3.4, Math.min(8, 170 / curve.p))) });
+
+    const label = (pt: Pt, text: string, cls: string) => {
+      const t = el("text", {
+        class: `mark-label ${cls}`,
+        x: X(pt.x) + px(10),
+        y: Y(pt.y) - px(9),
+        "font-size": px(13),
+        "stroke-width": px(3),
+      });
+      t.textContent = text;
+    };
+
+    const drawAddOverlay = () => {
+      const res = P && Q ? add(curve, P, Q) : null;
+      if (res?.kind === "inverse" && P) {
+        el("line", { class: "vline", x1: X(P.x), y1: Y(0), x2: X(P.x), y2: Y(curve.p - 1), "stroke-width": px(1.5), "stroke-dasharray": `${px(4)} ${px(3)}` });
+      } else if (res && res.lambda !== undefined && res.nu !== undefined) {
+        // The "line" y = λx + ν wraps around mod p: draw its p points.
+        const g = el("g", {});
+        for (let x = 0; x < curve.p; x += 1) {
+          el("circle", { class: "line-dot", cx: X(x), cy: Y(mod(res.lambda * x + res.nu, curve.p)), r: px(2.4) }, g);
+        }
+      }
+      return {
+        dim: !!res,
+        marks: () => {
+          if (res?.result) {
+            const R = res.result;
+            const negR = negate(R, curve.p)!;
+            if (!same(R, negR)) {
+              el("line", { class: "reflect", x1: X(R.x), y1: Y(negR.y), x2: X(R.x), y2: Y(R.y), "stroke-width": px(1.5), "stroke-dasharray": `${px(3)} ${px(3)}` });
+              ring(negR, "ring-neg", 1, true);
+              label(negR, "−R", "label-r");
+            }
+            dotMark(R, "fill-r");
+            ring(R, "ring-r", 1.25);
+            label(R, "R", "label-r");
+          }
+          if (Q && !(P && same(P, Q))) {
+            dotMark(Q, "fill-q");
+            ring(Q, "ring-q");
+            label(Q, "Q", "label-q");
+          }
+          if (P) {
+            dotMark(P, "fill-p");
+            ring(P, "ring-p");
+            label(P, P && Q && same(P, Q) ? "P = Q" : "P", "label-p");
+          }
+        },
+      };
+    };
+
+    const drawMulOverlay = () => {
+      const orbit = P ? (multiples(curve, P, k) as Point[]) : [];
+      if (orbit.length > 1) {
+        const path = orbit
+          .filter((q): q is Pt => q !== null)
+          .map((q, i) => `${i ? "L" : "M"}${X(q.x)} ${Y(q.y)}`)
+          .join(" ");
+        el("path", { class: "orbit", d: path, "stroke-width": px(1.4), "stroke-linejoin": "round" });
+      }
+      return {
+        dim: !!P,
+        marks: () => {
+          if (!P) return;
+          const showNumbers = orbit.length <= 24;
+          orbit.forEach((q, i) => {
+            if (!q) return;
+            dotMark(q, "fill-p");
+            if (showNumbers && i > 0 && i < orbit.length - 1) {
+              el("text", { class: "label-orbit", x: X(q.x) + px(7), y: Y(q.y) - px(6), "font-size": px(10) }).textContent = String(i + 1);
+            }
+          });
+          ring(P, "ring-p");
+          label(P, "P", "label-p");
+          const kP = orbit[orbit.length - 1];
+          if (kP && k > 1) {
+            ring(kP, "ring-r", 1.25);
+            label(kP, `${k}P`, "label-r");
+          }
+        },
+      };
+    };
+
+    // ----- text panels -----
+    const renderFacts = () => {
+      const { p, a, b } = curve;
+      const bound = 2 * Math.sqrt(p);
+      const terms = [a ? `${a === 1 ? "" : a}x` : "", b ? String(b) : ""].filter(Boolean);
+      facts.innerHTML = "";
+      const row = (term: string, value: string) => {
+        const dt = document.createElement("dt");
+        dt.textContent = term;
+        const dd = document.createElement("dd");
+        dd.textContent = value;
+        facts.append(dt, dd);
+      };
+      row("Curve", `y² = x³${terms.map((t) => ` + ${t}`).join("")} over F${sub(p)}`);
+      row("Points", `#E = ${groupSize} (${groupSize - 1} plotted + O at infinity)`);
+      row("Hasse", `|#E − (p + 1)| = ${Math.abs(groupSize - (p + 1))} ≤ 2√p ≈ ${bound.toFixed(1)}`);
+    };
+
+    const renderAdd = () => {
+      addSteps.innerHTML = "";
+      if (!P) {
+        addReadout.textContent = "Tap a point to pick P.";
+        hint.textContent = "Tap a point for P, then another for Q. Tap P again to double it.";
+        return;
+      }
+      if (!Q) {
+        addReadout.innerHTML = `<span class="tag-p">P</span> = ${fmt(P)}. Now pick <span class="tag-q">Q</span>.`;
+        hint.textContent = "Tap a second point for Q (or P again for 2P).";
+        return;
+      }
+      const res = add(curve, P, Q);
+      const doubling = res.kind === "double";
+      addReadout.innerHTML =
+        `<span class="tag-p">P</span> = ${fmt(P)}, <span class="tag-q">Q</span> = ${fmt(Q)}<br/>` +
+        `<span class="tag-r">${doubling ? "2P" : "P + Q"}</span> = ${fmt(res.result)}`;
+      for (const step of res.steps) {
+        const li = document.createElement("li");
+        li.textContent = step;
+        addSteps.appendChild(li);
+      }
+      if (res.result) {
+        const li = document.createElement("li");
+        li.textContent = `The line meets the curve again at −R = ${fmt(negate(res.result, curve.p))}; reflecting it (y → −y) gives R.`;
+        addSteps.appendChild(li);
+      }
+      hint.textContent = "Tap any point to start over with a new P.";
+    };
+
+    const renderMul = () => {
+      if (!P) {
+        mulReadout.textContent = "Tap a point to pick P.";
+        mulNote.textContent = "";
+        hint.textContent = "Tap a point for P, then drag k.";
+        kInput.disabled = true;
+        playBtn.disabled = true;
+        return;
+      }
+      const n = order(curve, P, groupSize);
+      kInput.disabled = false;
+      playBtn.disabled = false;
+      kInput.max = String(n);
+      k = Math.min(k, n);
+      kInput.value = String(k);
+      kValue.textContent = String(k);
+      const kP = multiples(curve, P, k).at(-1) ?? null;
+      mulReadout.innerHTML = `<span class="tag-p">P</span> = ${fmt(P)}, ord(P) = ${n}<br/><span class="tag-r">${k}·P</span> = ${fmt(kP)}`;
+      mulNote.textContent =
+        n === groupSize
+          ? `P generates the whole group: its ${n} multiples visit every point, then wrap to O. Recovering k from k·P is the discrete log problem; on real curves (p ≈ 2²⁵⁶) that's infeasible.`
+          : `P only reaches ${n} of the ${groupSize} points (a subgroup; ${n} divides ${groupSize}). Pick another point to compare.`;
+      hint.textContent = "Tap another point to change P.";
+    };
+
+    const render = () => {
+      if (mode === "add") renderAdd();
+      else renderMul();
+      draw();
+    };
+
+    // ----- interaction -----
+    const stopPlay = () => {
+      window.clearInterval(playTimer);
+      playTimer = 0;
+      playBtn.textContent = "Play";
+    };
+
+    const setCurve = (next: Curve) => {
+      stopPlay();
+      curve = next;
+      pts = curvePoints(curve);
+      groupSize = pts.length + 1;
+      // Start with an example selected so the plot isn't empty.
+      const firstNonZero = pts.find((pt) => pt.y !== 0) ?? pts[0] ?? null;
+      P = firstNonZero;
+      Q = P ? add(curve, P, P).result : null;
+      k = Math.min(5, P ? order(curve, P, groupSize) : 1);
+      renderFacts();
+      render();
+    };
+
+    const readParams = () => {
+      const p = Number(params.p.value);
+      const a = Number(params.a.value);
+      const b = Number(params.b.value);
+      if (!isPrime(p) || p < 5 || p > MAX_P) return `p must be a prime between 5 and ${MAX_P}.`;
+      if (!Number.isInteger(a) || !Number.isInteger(b)) return "a and b must be integers.";
+      const next = { p, a: mod(a, p), b: mod(b, p) };
+      if (!isSmooth(next)) return "4a³ + 27b² ≡ 0 (mod p): that curve is singular, so its points don't form a group.";
+      return next;
+    };
+
+    const applyParams = () => {
+      const next = readParams();
+      if (typeof next === "string") {
+        errorEl.textContent = next;
+        errorEl.hidden = false;
+        return;
+      }
+      errorEl.hidden = true;
+      setCurve(next);
+    };
+
+    presetSelect.addEventListener("change", () => {
+      const option = presetSelect.selectedOptions[0];
+      if (!option || option.value === "custom") return;
+      params.p.value = option.dataset.p!;
+      params.a.value = option.dataset.a!;
+      params.b.value = option.dataset.b!;
+      applyParams();
+    });
+
+    for (const input of Object.values(params)) {
+      input.addEventListener("input", () => {
+        presetSelect.value = "custom";
+        applyParams();
+      });
+    }
+
+    for (const tab of tabs) {
+      tab.addEventListener("click", () => {
+        mode = tab.dataset.ecMode as "add" | "mul";
+        stopPlay();
+        for (const t of tabs) t.setAttribute("aria-selected", String(t === tab));
+        for (const panel of panels) panel.hidden = panel.dataset.ecPanel !== mode;
+        render();
+      });
+    }
+
+    const nearestPoint = (event: PointerEvent): Pt | null => {
+      const ctm = svg.getScreenCTM();
+      if (!ctm) return null;
+      const loc = new DOMPoint(event.clientX, event.clientY).matrixTransform(ctm.inverse());
+      let best: Pt | null = null;
+      let bestDist = Infinity;
+      for (const pt of pts) {
+        const d = Math.hypot(X(pt.x) - loc.x, Y(pt.y) - loc.y);
+        if (d < bestDist) {
+          best = pt;
+          bestDist = d;
+        }
+      }
+      // Generous on touch screens, but not so far that a tap in empty space counts.
+      return bestDist <= Math.max(px(18), 0.9) ? best : null;
+    };
+
+    svg.addEventListener("pointerdown", (event) => {
+      const pt = nearestPoint(event);
+      if (!pt) return;
+      if (mode === "add") {
+        if (!P || Q) {
+          P = pt;
+          Q = null;
+        } else {
+          Q = pt;
+        }
+      } else {
+        stopPlay();
+        P = pt;
+        k = 1;
+      }
+      render();
+    });
+
+    kInput.addEventListener("input", () => {
+      stopPlay();
+      k = Number(kInput.value);
+      render();
+    });
+
+    playBtn.addEventListener("click", () => {
+      if (playTimer) {
+        stopPlay();
+        return;
+      }
+      if (!P) return;
+      const n = order(curve, P, groupSize);
+      if (k >= n) k = 0;
+      playBtn.textContent = "Pause";
+      playTimer = window.setInterval(() => {
+        k += 1;
+        render();
+        if (k >= n) stopPlay();
+      }, PLAY_STEP_MS);
+    });
+
+    // Mark sizes depend on the rendered width.
+    new ResizeObserver(() => draw()).observe(svg);
+
+    document.addEventListener("astro:before-swap", stopPlay, { once: true });
+
+    applyParams();
+  };
+
+  init();
+  document.addEventListener("astro:page-load", init);
+</script>

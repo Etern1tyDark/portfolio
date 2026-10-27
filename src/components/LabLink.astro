@@ -1,0 +1,33 @@
+---
+import { withBasePath } from '../utils/withBasePath';
+
+const { active = false } = Astro.props;
+---
+
+<a
+  href={withBasePath('/lab')}
+  class:list={['lab-link bg-gray-700 text-white px-2.5 py-2 rounded-md hover:bg-gray-600 transition-colors', { 'is-active': active }]}
+  aria-label="Crypto Lab"
+  title="Crypto Lab"
+  aria-current={active ? 'page' : undefined}
+>
+  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2v7.53a2 2 0 0 1-.21.9L4.72 20.55A1 1 0 0 0 5.62 22h12.76a1 1 0 0 0 .9-1.45l-5.07-10.12a2 2 0 0 1-.21-.9V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg>
+</a>
+
+<style>
+  .lab-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .lab-link.is-active {
+    color: #7aa2f7;
+    box-shadow: inset 0 0 0 1px rgba(122, 162, 247, 0.6);
+  }
+
+  :global(html.light) .lab-link.is-active {
+    color: #2a5bb8;
+    box-shadow: inset 0 0 0 1px rgba(42, 91, 184, 0.5);
+  }
+</style>

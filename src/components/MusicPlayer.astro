@@ -2,11 +2,24 @@
 import { withBasePath } from '../utils/withBasePath';
 import music from '../data/music.json';
 
-const track = { ...music, src: withBasePath(music.src) };
+// Normal mode plays normalTrack; hard mode (unlocked in the rhythm game) plays
+// whichever of hardTracks the player picked.
+const tracks = Object.fromEntries(
+  Object.entries(music.tracks).map(([id, t]) => [id, { title: t.title, artist: t.artist, src: withBasePath(t.src) }]),
+);
+const track = tracks[music.normalTrack];
 ---
 
-<div class="music-player" data-music-player data-volume={track.volume} transition:persist="music-player">
-  <audio src={track.src} preload="none" loop></audio>
+<div
+  class="music-player"
+  data-music-player
+  data-volume={music.volume}
+  data-tracks={JSON.stringify(tracks)}
+  data-normal-track={music.normalTrack}
+  data-hard-tracks={music.hardTracks.join(",")}
+  transition:persist="music-player"
+>
+  <audio src={track.src} preload="none" loop data-track={music.normalTrack}></audio>
   <button
     type="button"
     class="music-toggle"
@@ -21,7 +34,7 @@ const track = { ...music, src: withBasePath(music.src) };
   <span class="music-eq" aria-hidden="true"><i></i><i></i><i></i></span>
   <span class="music-label">
     <span class="music-status" data-music-status>Paused</span>
-    <span class="music-track">{track.title} — {track.artist}</span>
+    <span class="music-track" data-music-track>{track.title} — {track.artist}</span>
   </span>
 </div>
 
@@ -213,8 +226,12 @@ const track = { ...music, src: withBasePath(music.src) };
   const audio = player?.querySelector("audio");
   const toggle = player?.querySelector<HTMLButtonElement>("[data-music-toggle]");
   const status = player?.querySelector<HTMLElement>("[data-music-status]");
+  const trackLabel = player?.querySelector<HTMLElement>("[data-music-track]");
+
+  type Track = { title: string; artist: string; src: string };
 
   if (player && audio && toggle && status) {
+    const tracks: Record<string, Track> = JSON.parse(player.dataset.tracks ?? "{}");
     audio.volume = Number(player.dataset.volume) || 0.2;
 
     const readPreference = () => {
@@ -240,6 +257,34 @@ const track = { ...music, src: withBasePath(music.src) };
     };
 
     const play = () => audio.play().then(render);
+
+    // Mirrors the rhythm game's choice (same storage keys it writes).
+    const normalTrack = player.dataset.normalTrack ?? "";
+    const hardTracks = (player.dataset.hardTracks ?? "").split(",").filter((id) => tracks[id]);
+    const wantedTrack = () => {
+      let hard = false;
+      let song: string | null = null;
+      try {
+        hard = localStorage.getItem("rhythm-unlocked") === "1" && localStorage.getItem("rhythm-mode") === "hard";
+        song = localStorage.getItem("rhythm-song");
+      } catch {}
+      if (!hard || !hardTracks.length) return normalTrack;
+      return song && hardTracks.includes(song) ? song : (hardTracks.find((id) => id !== normalTrack) ?? hardTracks[0]);
+    };
+
+    const switchTrack = (id: string) => {
+      const next = tracks[id];
+      if (!next || audio.dataset.track === id) return;
+      const wasPlaying = !audio.paused;
+      audio.dataset.track = id;
+      audio.src = next.src;
+      if (trackLabel) trackLabel.textContent = `${next.title} — ${next.artist}`;
+      toggle.setAttribute("aria-label", `Play ${next.title} by ${next.artist}`);
+      if (wasPlaying) play().catch(() => {});
+    };
+
+    switchTrack(wantedTrack());
+    window.addEventListener("rhythm-mode", () => switchTrack(wantedTrack()));
 
     // Browsers usually block audible autoplay until the visitor interacts with
     // the page, so fall back to starting on their first click / key / tap.

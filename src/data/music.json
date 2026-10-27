@@ -1,13 +1,39 @@
 {
-  "title": "XYZ",
-  "artist": "technoplanet",
-  "src": "/xyz-technoplanet.mp3",
   "volume": 0.2,
-  "offsetMs": 26,
-  "timingPoints": [
-    { "timeMs": 1232, "bpm": 154, "meter": 3 },
-    { "timeMs": 19933, "bpm": 142, "meter": 3 },
-    { "timeMs": 42749, "bpm": 148, "meter": 3 },
-    { "timeMs": 62208, "bpm": 154, "meter": 3 }
-  ]
+  "normalTrack": "xyz",
+  "hardTracks": ["xyz", "kairos", "antikythera"],
+  "tracks": {
+    "xyz": {
+      "title": "XYZ",
+      "artist": "technoplanet",
+      "src": "/xyz-technoplanet.mp3",
+      "offsetMs": 26,
+      "timingPoints": [
+        { "timeMs": 1232, "bpm": 154, "meter": 3 },
+        { "timeMs": 19933, "bpm": 142, "meter": 3 },
+        { "timeMs": 42749, "bpm": 148, "meter": 3 },
+        { "timeMs": 62208, "bpm": 154, "meter": 3 }
+      ],
+      "durationMs": 153287,
+      "chart": "xyz"
+    },
+    "kairos": {
+      "title": "Kairos",
+      "artist": "ARForest feat. nayuta",
+      "src": "/kairos-arforest.mp3",
+      "offsetMs": 13,
+      "timingPoints": [{ "timeMs": 0, "bpm": 200, "meter": 4 }],
+      "durationMs": 129624,
+      "chart": "kairos"
+    },
+    "antikythera": {
+      "title": "Antikythera",
+      "artist": "technoplanet",
+      "src": "/antikythera-technoplanet.mp3",
+      "offsetMs": 38,
+      "timingPoints": [{ "timeMs": 1222, "bpm": 220, "meter": 4 }],
+      "durationMs": 168300,
+      "chart": "antikythera"
+    }
+  }
 }

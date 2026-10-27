@@ -1,0 +1,312 @@
+---
+const primes = [11, 13, 23, 29, 31, 47, 61, 97];
+---
+
+<section class="lab-card cg-lab" data-cg-lab>
+  <header>
+    <p class="lab-card-eyebrow">Visualizer 02</p>
+    <h2 class="lab-card-title">Cyclic groups in F<sub>p</sub><sup>*</sup></h2>
+    <p class="lab-card-intro">
+      The nonzero numbers mod a prime p form a group under multiplication. Powers of an element g walk around it:
+      a <em>generator</em> visits every element before coming back to 1, others get stuck in a smaller cycle whose
+      length divides p − 1. Going forward (g<sup>k</sup>) is easy; going back from g<sup>k</sup> to k is the
+      discrete log problem that Diffie–Hellman and DSA rely on.
+    </p>
+  </header>
+
+  <div class="lab-card-body">
+    <div class="lab-plot-wrap">
+      <svg class="lab-plot cg-plot" data-cg-plot viewBox="-1.25 -1.25 2.5 2.5" role="img" aria-label="Elements of the group on a circle"></svg>
+      <p class="lab-hint">Tap an element h to find k with g<sup>k</sup> = h.</p>
+    </div>
+
+    <div class="lab-controls">
+      <div class="lab-params">
+        <label class="lab-field">
+          <span>p</span>
+          <select data-cg-p>
+            {primes.map((p) => <option value={p} selected={p === 23}>{p}</option>)}
+          </select>
+        </label>
+        <label class="lab-field">
+          <span>g</span>
+          <input type="number" inputmode="numeric" min="2" value="5" data-cg-g />
+        </label>
+      </div>
+
+      <div class="lab-k-row">
+        <label class="lab-field lab-k">
+          <span>k = <output data-cg-k-value>1</output></span>
+          <input type="range" min="1" max="1" value="1" data-cg-k />
+        </label>
+        <button type="button" class="lab-button" data-cg-play>Play</button>
+      </div>
+
+      <p class="lab-readout" data-cg-readout aria-live="polite"></p>
+      <dl class="lab-facts" data-cg-facts></dl>
+      <div class="cg-legend" data-cg-legend></div>
+      <p class="lab-note" data-cg-log aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .cg-lab {
+    --cg-path: #7aa2f7;
+    --cg-current: #9ece6a;
+    --cg-target: #f7768e;
+  }
+
+  :global(html.light) .cg-lab {
+    --cg-path: #2a5bb8;
+    --cg-current: #3f7f17;
+    --cg-target: #c4314b;
+  }
+
+  .cg-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+    color: var(--lab-muted);
+  }
+
+  .cg-legend :global(span) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .cg-legend :global(i) {
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 999px;
+  }
+
+  .cg-plot :global(.ring) { fill: none; stroke: var(--lab-grid); }
+  .cg-plot :global(.chord) { stroke: var(--cg-path); opacity: 0.55; fill: none; }
+  .cg-plot :global(.chord.latest) { opacity: 1; }
+  .cg-plot :global(.el-label) { fill: var(--lab-muted); font-family: "Fira Code", monospace; }
+  .cg-plot :global(.current) { fill: none; stroke: var(--cg-current); }
+  .cg-plot :global(.target) { fill: none; stroke: var(--cg-target); }
+</style>
+
+<script>
+  const PLAY_STEP_MS = 380;
+  // Colours by element order: generators first, then the smaller subgroups.
+  const ORDER_COLOURS = ["#e0af68", "#7dcfff", "#bb9af7", "#9ece6a", "#ff9e64", "#73daca", "#f7768e", "#c0caf5"];
+
+  const powMod = (base: number, exp: number, p: number) => {
+    let result = 1;
+    let b = base % p;
+    let e = exp;
+    while (e > 0) {
+      if (e & 1) result = (result * b) % p;
+      b = (b * b) % p;
+      e >>= 1;
+    }
+    return result;
+  };
+
+  const orderOf = (a: number, p: number) => {
+    let x = a % p;
+    for (let k = 1; k < p; k += 1) {
+      if (x === 1) return k;
+      x = (x * a) % p;
+    }
+    return p - 1;
+  };
+
+  const init = () => {
+    const root = document.querySelector<HTMLElement>("[data-cg-lab]");
+    if (!root || root.dataset.bound === "1") return;
+    root.dataset.bound = "1";
+
+    const svg = root.querySelector<SVGSVGElement>("[data-cg-plot]")!;
+    const pSelect = root.querySelector<HTMLSelectElement>("[data-cg-p]")!;
+    const gInput = root.querySelector<HTMLInputElement>("[data-cg-g]")!;
+    const kInput = root.querySelector<HTMLInputElement>("[data-cg-k]")!;
+    const kValue = root.querySelector<HTMLElement>("[data-cg-k-value]")!;
+    const playBtn = root.querySelector<HTMLButtonElement>("[data-cg-play]")!;
+    const readout = root.querySelector<HTMLElement>("[data-cg-readout]")!;
+    const facts = root.querySelector<HTMLElement>("[data-cg-facts]")!;
+    const legend = root.querySelector<HTMLElement>("[data-cg-legend]")!;
+    const logNote = root.querySelector<HTMLElement>("[data-cg-log]")!;
+
+    let p = 23;
+    let g = 5;
+    let k = 1;
+    let target: number | null = null;
+    let timer = 0;
+    let orders: number[] = [];
+    let orderColour = new Map<number, string>();
+
+    const NS = "http://www.w3.org/2000/svg";
+    const el = (name: string, attrs: Record<string, string | number>, parent: Element = svg) => {
+      const node = document.createElementNS(NS, name);
+      for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
+      parent.appendChild(node);
+      return node;
+    };
+    // Element a (1..p-1) sits at angle by its value, 1 at the top, clockwise.
+    const pos = (a: number) => {
+      const angle = ((a - 1) / (p - 1)) * Math.PI * 2 - Math.PI / 2;
+      return [Math.cos(angle), Math.sin(angle)];
+    };
+
+    const setup = () => {
+      orders = Array.from({ length: p }, (_, a) => (a === 0 ? 0 : orderOf(a, p)));
+      const distinct = [...new Set(orders.slice(1))].sort((x, y) => y - x);
+      orderColour = new Map(distinct.map((o, i) => [o, ORDER_COLOURS[i % ORDER_COLOURS.length]]));
+      legend.innerHTML = "";
+      for (const o of distinct) {
+        const count = orders.filter((x) => x === o).length;
+        const item = document.createElement("span");
+        const dot = document.createElement("i");
+        dot.style.background = orderColour.get(o)!;
+        item.append(dot, `order ${o}${o === p - 1 ? " (generators)" : ""}: ${count}`);
+        legend.appendChild(item);
+      }
+    };
+
+    const render = () => {
+      const n = orders[g];
+      k = Math.min(k, n);
+      kInput.max = String(n);
+      kInput.value = String(k);
+      kValue.textContent = String(k);
+
+      svg.replaceChildren();
+      el("circle", { class: "ring", cx: 0, cy: 0, r: 1, "stroke-width": 0.006 });
+      // Path 1 → g → g² → … → g^k
+      let prev = 1;
+      for (let i = 1; i <= k; i += 1) {
+        const cur = powMod(g, i, p);
+        const [x1, y1] = pos(prev);
+        const [x2, y2] = pos(cur);
+        el("line", { class: `chord${i === k ? " latest" : ""}`, x1, y1, x2, y2, "stroke-width": i === k ? 0.014 : 0.008 });
+        prev = cur;
+      }
+      const r = p > 50 ? 0.03 : 0.045;
+      const labelled = p <= 31;
+      for (let a = 1; a < p; a += 1) {
+        const [x, y] = pos(a);
+        const dot = el("circle", { cx: x, cy: y, r, fill: orderColour.get(orders[a])! });
+        el("title", {}, dot).textContent = `${a}: order ${orders[a]}`;
+        if (labelled) {
+          el("text", { class: "el-label", x: x * 1.13, y: y * 1.13 + 0.025, "font-size": 0.07, "text-anchor": "middle" }).textContent = String(a);
+        }
+      }
+      const gk = powMod(g, k, p);
+      const [cx, cy] = pos(gk);
+      el("circle", { class: "current", cx, cy, r: r * 2, "stroke-width": 0.014 });
+      if (target !== null) {
+        const [tx, ty] = pos(target);
+        el("circle", { class: "target", cx: tx, cy: ty, r: r * 2.6, "stroke-width": 0.012, "stroke-dasharray": "0.03 0.02" });
+      }
+
+      readout.innerHTML = `g = ${g}, ord(g) = ${n}<br/>g<sup>${k}</sup> ≡ ${gk} (mod ${p})`;
+      facts.innerHTML = "";
+      const row = (term: string, value: string) => {
+        const dt = document.createElement("dt");
+        dt.textContent = term;
+        const dd = document.createElement("dd");
+        dd.textContent = value;
+        facts.append(dt, dd);
+      };
+      const generators = orders.filter((o) => o === p - 1).length;
+      const sub = (n: number) => String(n).replace(/\d/g, (d) => "₀₁₂₃₄₅₆₇₈₉"[Number(d)]);
+      row("Group", `F${sub(p)}* has ${p - 1} elements`);
+      row("g", n === p - 1 ? `${g} is a generator (one of ${generators})` : `${g} generates a subgroup of size ${n}`);
+      row("Lagrange", `${n} divides ${p - 1}`);
+    };
+
+    const solveLog = () => {
+      if (target === null) {
+        logNote.textContent = "";
+        return;
+      }
+      let x = 1;
+      for (let i = 1; i <= orders[g]; i += 1) {
+        x = (x * g) % p;
+        if (x === target) {
+          logNote.textContent = `log_${g}(${target}) = ${i}: found by trying k = 1, 2, … (${i} multiplications). For a 256-bit p that walk would never finish.`;
+          return;
+        }
+      }
+      logNote.textContent = `${target} is not a power of ${g}: it lies outside the subgroup ⟨${g}⟩, so no k works.`;
+    };
+
+    const stop = () => {
+      window.clearInterval(timer);
+      timer = 0;
+      playBtn.textContent = "Play";
+    };
+
+    const readG = () => {
+      const value = Math.round(Number(gInput.value));
+      g = Math.min(p - 1, Math.max(2, Number.isFinite(value) ? value : 2));
+    };
+
+    pSelect.addEventListener("change", () => {
+      stop();
+      p = Number(pSelect.value);
+      gInput.max = String(p - 1);
+      readG();
+      target = null;
+      k = 1;
+      setup();
+      solveLog();
+      render();
+    });
+    gInput.addEventListener("input", () => {
+      stop();
+      readG();
+      k = 1;
+      solveLog();
+      render();
+    });
+    kInput.addEventListener("input", () => {
+      stop();
+      k = Number(kInput.value);
+      render();
+    });
+    playBtn.addEventListener("click", () => {
+      if (timer) return stop();
+      if (k >= orders[g]) k = 0;
+      playBtn.textContent = "Pause";
+      timer = window.setInterval(() => {
+        k += 1;
+        render();
+        if (k >= orders[g]) stop();
+      }, PLAY_STEP_MS);
+    });
+    svg.addEventListener("pointerdown", (event) => {
+      const ctm = svg.getScreenCTM();
+      if (!ctm) return;
+      const loc = new DOMPoint(event.clientX, event.clientY).matrixTransform(ctm.inverse());
+      let best = 1;
+      let bestDist = Infinity;
+      for (let a = 1; a < p; a += 1) {
+        const [x, y] = pos(a);
+        const d = Math.hypot(x - loc.x, y - loc.y);
+        if (d < bestDist) {
+          best = a;
+          bestDist = d;
+        }
+      }
+      if (bestDist > 0.2) return;
+      target = best;
+      solveLog();
+      render();
+    });
+    document.addEventListener("astro:before-swap", stop, { once: true });
+
+    gInput.max = String(p - 1);
+    setup();
+    render();
+  };
+
+  init();
+  document.addEventListener("astro:page-load", init);
+</script>
